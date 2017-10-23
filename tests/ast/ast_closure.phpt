@@ -1,0 +1,19 @@
+--TEST--
+Stackdriver Debugger: Can insert in a closure
+--FILE--
+<?php
+
+var_dump(stackdriver_debugger_add_logpoint('code.php', 63, 'INFO', 'Logpoint hit!'));
+
+require_once(__DIR__ . '/code.php');
+
+$c = new TestClass();
+$c->executeClosure(3);
+
+$logpoints = stackdriver_debugger_list_logpoints();
+echo "Number of logpoints: " . count($logpoints) . PHP_EOL;
+
+?>
+--EXPECTF--
+bool(true)
+Number of logpoints: 3
