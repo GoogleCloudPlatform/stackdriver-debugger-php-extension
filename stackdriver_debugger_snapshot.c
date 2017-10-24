@@ -16,11 +16,9 @@
 
 #include "php.h"
 #include "php_stackdriver_debugger.h"
+#include "stackdriver_debugger_ast.h"
 #include "stackdriver_debugger_snapshot.h"
-
-#if PHP_VERSION_ID < 70100
-#include "standard/php_rand.h"
-#endif
+#include "standard/php_mt_rand.h"
 
 /* Initialize an empty, allocated variable */
 static void init_variable(stackdriver_debugger_variable_t *variable)
@@ -325,7 +323,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename, zend_long
         zend_hash_init(snapshot->expressions, expressions->nNumUsed, NULL, ZVAL_PTR_DTOR, 0);
 
         ZEND_HASH_FOREACH_VAL(expressions, expression) {
-            if (valid_debugger_statement(expression) != SUCCESS) {
+            if (valid_debugger_statement(Z_STR_P(expression)) != SUCCESS) {
                 return FAILURE;
             }
             zend_hash_next_index_insert(snapshot->expressions, expression);
