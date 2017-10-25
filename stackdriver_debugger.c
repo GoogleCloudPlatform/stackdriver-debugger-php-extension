@@ -437,7 +437,6 @@ PHP_MSHUTDOWN_FUNCTION(stackdriver_debugger)
     stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS_PASSTHRU);
     UNREGISTER_INI_ENTRIES();
 
-
     return SUCCESS;
 }
 /* }}} */
