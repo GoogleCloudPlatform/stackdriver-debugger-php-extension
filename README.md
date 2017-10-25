@@ -1,4 +1,4 @@
-# Stackdriver Debugger PHP Extension
+# Stackdriver Debugger PHP Extension [![CircleCI](https://circleci.com/gh/GoogleCloudPlatform/stackdriver-debugger-php-extension.svg?style=svg)](https://circleci.com/gh/GoogleCloudPlatform/stackdriver-debugger-php-extension)
 
 Stackdriver Debugger is a free, open-source way to debug your running
 application without requiring a redeployment.
