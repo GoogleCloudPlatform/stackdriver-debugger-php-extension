@@ -56,7 +56,7 @@ typedef struct stackdriver_debugger_snapshot_t {
 
 void evaluate_snapshot(zend_execute_data *execute_data, stackdriver_debugger_snapshot_t *snapshot);
 void list_snapshots(zval *return_value);
-int register_snapshot(zend_string *snapshot_id, zend_string *filename, zend_long lineno, zend_string *condition, HashTable *expressions, HashTable *callback);
+int register_snapshot(zend_string *snapshot_id, zend_string *filename, zend_long lineno, zend_string *condition, HashTable *expressions, zval *callback);
 
 /* request lifecycle callbacks */
 int stackdriver_debugger_snapshot_rinit(TSRMLS_D);

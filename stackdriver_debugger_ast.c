@@ -721,7 +721,9 @@ int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
 {
     zend_ast_process = original_zend_ast_process;
 
-    zend_hash_destroy(user_whitelisted_functions);
+    if (user_whitelisted_functions != NULL) {
+        zend_hash_destroy(user_whitelisted_functions);
+    }
 
     return SUCCESS;
 }

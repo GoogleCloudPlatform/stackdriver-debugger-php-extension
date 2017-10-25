@@ -18,7 +18,12 @@
 #include "php_stackdriver_debugger.h"
 #include "stackdriver_debugger_ast.h"
 #include "stackdriver_debugger_snapshot.h"
+
+#if PHP_VERSION_ID < 70100
+#include "standard/php_rand.h"
+#else
 #include "standard/php_mt_rand.h"
+#endif
 
 /* Initialize an empty, allocated variable */
 static void init_variable(stackdriver_debugger_variable_t *variable)
@@ -303,7 +308,7 @@ static int execute_data_to_stackframe(zend_execute_data *execute_data, stackdriv
  */
 int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     zend_long lineno, zend_string *condition, HashTable *expressions,
-    HashTable *callback)
+    zval *callback)
 {
     zval *snapshots, *snapshot_ptr;
     stackdriver_debugger_snapshot_t *snapshot;

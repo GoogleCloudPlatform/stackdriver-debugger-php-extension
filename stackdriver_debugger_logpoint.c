@@ -18,10 +18,11 @@
 #include "php_stackdriver_debugger.h"
 #include "stackdriver_debugger_ast.h"
 #include "stackdriver_debugger_logpoint.h"
-#include "standard/php_mt_rand.h"
 
 #if PHP_VERSION_ID < 70100
 #include "standard/php_rand.h"
+#else
+#include "standard/php_mt_rand.h"
 #endif
 
 #ifdef _WIN32
