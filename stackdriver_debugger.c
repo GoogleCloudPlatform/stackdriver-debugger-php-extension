@@ -355,7 +355,7 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
     zend_string *filename, *full_filename, *format = NULL, *snapshot_id = NULL, *condition = NULL, *current_file = NULL, *log_level = NULL;
     zend_long lineno;
     HashTable *options = NULL, *expressions = NULL;
-    zval *zv;
+    zval *zv, *callback;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SlSS|h", &filename, &lineno, &log_level, &format, &options) == FAILURE) {
         RETURN_FALSE;
@@ -381,6 +381,11 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
         if (zv != NULL && !Z_ISNULL_P(zv)) {
             current_file = Z_STR_P(zv);
         }
+
+        zv = zend_hash_str_find(options, "callback", strlen("callback"));
+        if (zv != NULL && !Z_ISNULL_P(zv)) {
+            callback = zv;
+        }
     }
 
     if (current_file == NULL) {
@@ -389,7 +394,7 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
 
     full_filename = stackdriver_debugger_full_filename(filename, current_file);
 
-    if (register_logpoint(snapshot_id, full_filename, lineno, log_level, condition, format, expressions) != SUCCESS) {
+    if (register_logpoint(snapshot_id, full_filename, lineno, log_level, condition, format, expressions, callback) != SUCCESS) {
         zend_string_release(full_filename);
         RETURN_FALSE;
     }

@@ -170,7 +170,8 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
     }
     ZVAL_STR(&message->message, m);
 
-    if (Z_TYPE(logpoint->callback) != IS_NULL) {
+    // printf("callback type: %d\n", Z_TYPE(logpoint->callback));
+    if (!Z_ISUNDEF(logpoint->callback) && !Z_ISNULL(logpoint->callback)) {
         emit_message(&logpoint->callback, message);
     }
 
