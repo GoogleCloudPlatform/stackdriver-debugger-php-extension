@@ -101,6 +101,7 @@ function:
  *            in the execution context that are captured along with the local
  *            variables in scope.
  *      @type string $currentFile
+ *      @type callable $callable
  * }
  */
 function stackdriver_debugger_add_snapshot($filename, $line, $options);
@@ -168,6 +169,7 @@ function:
  *      @type string $condition
  *      @type array $expressions
  *      @type string $currentFile
+ *      @type callable $callable
  * }
  */
 function stackdriver_debugger_add_logpoint($filename, $line, $logLevel, $format, $options);
