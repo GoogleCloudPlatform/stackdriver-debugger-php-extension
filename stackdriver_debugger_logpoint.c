@@ -170,12 +170,12 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
     }
     ZVAL_STR(&message->message, m);
 
-    // printf("callback type: %d\n", Z_TYPE(logpoint->callback));
     if (!Z_ISUNDEF(logpoint->callback) && !Z_ISNULL(logpoint->callback)) {
         emit_message(&logpoint->callback, message);
+        destroy_message(message);
+    } else {
+        zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(collected_messages), message);
     }
-
-    zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(collected_messages), message);
 }
 
 /**
