@@ -27,7 +27,7 @@ typedef struct stackdriver_debugger_logpoint_t {
     zend_string *log_level;
 
     zend_string *format;
-    zval callback;
+    zval *callback;
 
     HashTable *expressions;
 } stackdriver_debugger_logpoint_t;

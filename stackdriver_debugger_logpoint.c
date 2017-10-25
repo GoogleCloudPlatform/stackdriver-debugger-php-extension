@@ -77,7 +77,7 @@ static void init_logpoint(stackdriver_debugger_logpoint_t *logpoint)
     logpoint->log_level = NULL;
     logpoint->format = NULL;
     logpoint->expressions = NULL;
-    ZVAL_NULL(&logpoint->callback);
+    logpoint->callback = NULL;
 }
 
 /* Cleanup an allocated logpoint including freeing memory */
@@ -95,6 +95,11 @@ static void destroy_logpoint(stackdriver_debugger_logpoint_t *logpoint)
 
     if (logpoint->expressions) {
         zend_hash_destroy(logpoint->expressions);
+    }
+
+    if (logpoint->callback) {
+        ZVAL_PTR_DTOR(logpoint->callback);
+        efree(logpoint->callback);
     }
 
     efree(logpoint);
@@ -171,8 +176,8 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
     }
     ZVAL_STR(&message->message, m);
 
-    if (!Z_ISUNDEF(logpoint->callback) && !Z_ISNULL(logpoint->callback)) {
-        handle_message_callback(&logpoint->callback, message);
+    if (logpoint->callback) {
+        handle_message_callback(logpoint->callback, message);
         destroy_message(message);
     } else {
         zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(collected_messages), message);
@@ -229,7 +234,8 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
         } ZEND_HASH_FOREACH_END();
     }
     if (callback != NULL) {
-        ZVAL_COPY(&logpoint->callback, callback);
+        logpoint->callback = (zval *)(emalloc(sizeof(zval)));
+        ZVAL_DUP(logpoint->callback, callback);
     }
 
     ZVAL_PTR(logpoint_ptr, logpoint);
