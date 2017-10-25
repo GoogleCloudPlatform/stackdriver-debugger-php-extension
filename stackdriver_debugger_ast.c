@@ -19,6 +19,7 @@
 #include "stackdriver_debugger_snapshot.h"
 #include "stackdriver_debugger_logpoint.h"
 #include "zend_language_scanner.h"
+#include "zend_exceptions.h"
 
 /* True global for storing the original zend_ast_process */
 static void (*original_zend_ast_process)(zend_ast*);
@@ -689,6 +690,7 @@ int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
     /* Clean up whitelisted function HashTable memory */
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
 
+    return SUCCESS;
 }
 
 /**
