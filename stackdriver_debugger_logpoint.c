@@ -119,7 +119,7 @@ static void destroy_message(stackdriver_debugger_message_t *message)
     efree(message);
 }
 
-static int emit_message(zval *callback, stackdriver_debugger_message_t *message)
+static int handle_message_callback(zval *callback, stackdriver_debugger_message_t *message)
 {
     zval callback_result;
     zval args[3];
@@ -171,7 +171,7 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
     ZVAL_STR(&message->message, m);
 
     if (!Z_ISUNDEF(logpoint->callback) && !Z_ISNULL(logpoint->callback)) {
-        emit_message(&logpoint->callback, message);
+        handle_message_callback(&logpoint->callback, message);
         destroy_message(message);
     } else {
         zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(collected_messages), message);

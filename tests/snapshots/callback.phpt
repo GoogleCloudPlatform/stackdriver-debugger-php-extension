@@ -34,7 +34,7 @@ echo "Number of breakpoints: " . count($list) . PHP_EOL;
 bool(true)
 Number of stackframes: 2
 loop.php:7
-basic_variable_dump.php:8
+callback.php:22
 array(4) {
   [0]=>
   array(2) {

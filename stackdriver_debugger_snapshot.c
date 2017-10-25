@@ -81,6 +81,7 @@ static void init_snapshot(stackdriver_debugger_snapshot_t *snapshot)
     snapshot->evaluated_expressions = NULL;
     snapshot->stackframes_count = 0;
     snapshot->stackframes = NULL;
+    ZVAL_NULL(&snapshot->callback);
 }
 
 /* Cleanup an allocated snapshot including freeing memory */
@@ -194,6 +195,18 @@ static void expressions_to_zval(zval *return_value, stackdriver_debugger_snapsho
     Z_TRY_ADDREF_P(return_value);
 }
 
+static void snapshot_to_zval(zval *return_value, stackdriver_debugger_snapshot_t *snapshot)
+{
+    zval zstackframes, zexpressions;
+    array_init(return_value);
+    stackframes_to_zval(&zstackframes, snapshot);
+    expressions_to_zval(&zexpressions, snapshot);
+
+    add_assoc_str(return_value, "id", snapshot->id);
+    add_assoc_zval(return_value, "stackframes", &zstackframes);
+    add_assoc_zval(return_value, "evaluatedExpressions", &zexpressions);
+}
+
 /**
  * Given a provided zend_execute_data, find or rebuild the HashTable of
  * local variables at that moment.
@@ -288,7 +301,9 @@ static int execute_data_to_stackframe(zend_execute_data *execute_data, stackdriv
  * Registers a snapshot for recording. We store the snapshot configuration in a
  * request global HashTable by file which is consulted during file compilation.
  */
-int register_snapshot(zend_string *snapshot_id, zend_string *filename, zend_long lineno, zend_string *condition, HashTable *expressions)
+int register_snapshot(zend_string *snapshot_id, zend_string *filename,
+    zend_long lineno, zend_string *condition, HashTable *expressions,
+    HashTable *callback)
 {
     zval *snapshots, *snapshot_ptr;
     stackdriver_debugger_snapshot_t *snapshot;
@@ -328,6 +343,9 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename, zend_long
             }
             zend_hash_next_index_insert(snapshot->expressions, expression);
         } ZEND_HASH_FOREACH_END();
+    }
+    if (callback != NULL) {
+        ZVAL_COPY(&snapshot->callback, callback);
     }
 
     ZVAL_PTR(snapshot_ptr, snapshot);
@@ -402,6 +420,17 @@ static void capture_expressions(zend_execute_data *execute_data, stackdriver_deb
     }
 }
 
+static int handle_snapshot_callback(zval *callback, stackdriver_debugger_snapshot_t *snapshot)
+{
+    zval zsnapshot, callback_result;
+    snapshot_to_zval(&zsnapshot, snapshot);
+
+    if (call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 1, &zsnapshot, 0, NULL) != SUCCESS) {
+        return FAILURE;
+    }
+    return SUCCESS;
+}
+
 /**
  * Evaluate the provided snapshot in the provided execution scope.
  */
@@ -419,7 +448,12 @@ void evaluate_snapshot(zend_execute_data *execute_data, stackdriver_debugger_sna
     capture_expressions(execute_data, snapshot);
 
     /* record as collected */
-    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id), snapshot->id, snapshot);
+    if (!Z_ISUNDEF(snapshot->callback) && !Z_ISNULL(snapshot->callback)) {
+        handle_snapshot_callback(&snapshot->callback, snapshot);
+        destroy_snapshot(snapshot);
+    } else {
+        zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id), snapshot->id, snapshot);
+    }
 }
 
 /**
@@ -429,14 +463,8 @@ void list_snapshots(zval *return_value)
 {
     stackdriver_debugger_snapshot_t *snapshot;
     ZEND_HASH_FOREACH_PTR(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id), snapshot) {
-        zval zsnapshot, zstackframes, zexpressions;
-        array_init(&zsnapshot);
-        stackframes_to_zval(&zstackframes, snapshot);
-        expressions_to_zval(&zexpressions, snapshot);
-
-        add_assoc_str(&zsnapshot, "id", snapshot->id);
-        add_assoc_zval(&zsnapshot, "stackframes", &zstackframes);
-        add_assoc_zval(&zsnapshot, "evaluatedExpressions", &zexpressions);
+        zval zsnapshot;
+        snapshot_to_zval(&zsnapshot, snapshot);
         add_next_index_zval(return_value, &zsnapshot);
     } ZEND_HASH_FOREACH_END();
 }
