@@ -16,11 +16,13 @@
 
 #include "php.h"
 #include "standard/php_string.h"
+#include "standard/info.h"
 #include "php_stackdriver_debugger.h"
 #include "stackdriver_debugger.h"
 #include "stackdriver_debugger_ast.h"
 #include "stackdriver_debugger_logpoint.h"
 #include "stackdriver_debugger_snapshot.h"
+#include "zend_exceptions.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
 

@@ -86,7 +86,7 @@ static void init_snapshot(stackdriver_debugger_snapshot_t *snapshot)
     snapshot->evaluated_expressions = NULL;
     snapshot->stackframes_count = 0;
     snapshot->stackframes = NULL;
-    ZVAL_NULL(&snapshot->callback);
+    snapshot->callback = NULL;
 }
 
 /* Cleanup an allocated snapshot including freeing memory */
@@ -107,6 +107,11 @@ static void destroy_snapshot(stackdriver_debugger_snapshot_t *snapshot)
 
     if (snapshot->evaluated_expressions) {
         zend_hash_destroy(snapshot->evaluated_expressions);
+    }
+
+    if (snapshot->callback) {
+        ZVAL_PTR_DTOR(snapshot->callback);
+        efree(snapshot->callback);
     }
 
     for (i = 0; i < snapshot->stackframes_count; i++) {
@@ -350,7 +355,8 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
         } ZEND_HASH_FOREACH_END();
     }
     if (callback != NULL) {
-        ZVAL_COPY(&snapshot->callback, callback);
+        snapshot->callback = (zval *)(emalloc(sizeof(zval)));
+        ZVAL_DUP(snapshot->callback, callback);
     }
 
     ZVAL_PTR(snapshot_ptr, snapshot);
@@ -429,7 +435,6 @@ static int handle_snapshot_callback(zval *callback, stackdriver_debugger_snapsho
 {
     zval zsnapshot, callback_result;
     snapshot_to_zval(&zsnapshot, snapshot);
-
     if (call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 1, &zsnapshot, 0, NULL) != SUCCESS) {
         return FAILURE;
     }
@@ -453,9 +458,8 @@ void evaluate_snapshot(zend_execute_data *execute_data, stackdriver_debugger_sna
     capture_expressions(execute_data, snapshot);
 
     /* record as collected */
-    if (!Z_ISUNDEF(snapshot->callback) && !Z_ISNULL(snapshot->callback)) {
-        handle_snapshot_callback(&snapshot->callback, snapshot);
-        destroy_snapshot(snapshot);
+    if (snapshot->callback) {
+        handle_snapshot_callback(snapshot->callback, snapshot);
     } else {
         zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id), snapshot->id, snapshot);
     }

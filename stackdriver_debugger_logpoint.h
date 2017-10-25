@@ -46,5 +46,9 @@ typedef struct stackdriver_debugger_message_t {
 void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_logpoint_t *logpoint);
 int stackdriver_debugger_logpoint_rinit(TSRMLS_D);
 int stackdriver_debugger_logpoint_rshutdown(TSRMLS_D);
+void list_logpoints(zval *return_value);
+int register_logpoint(zend_string *logpoint_id, zend_string *filename,
+    zend_long lineno, zend_string *log_level, zend_string *condition,
+    zend_string *format, HashTable *expressions, zval *callback);
 
 #endif /* PHP_STACKDRIVER_DEBUGGER_LOGPOINT_H */
