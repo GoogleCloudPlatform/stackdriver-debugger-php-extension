@@ -459,7 +459,13 @@ void evaluate_snapshot(zend_execute_data *execute_data, stackdriver_debugger_sna
 
     /* record as collected */
     if (snapshot->callback) {
-        handle_snapshot_callback(snapshot->callback, snapshot);
+        if (handle_snapshot_callback(snapshot->callback, snapshot) != SUCCESS) {
+            php_error_docref(NULL, E_WARNING, "Error running snapshot callback.");
+        }
+        if (EG(exception) != NULL) {
+            zend_clear_exception();
+            php_error_docref(NULL, E_WARNING, "Error running snapshot callback.");
+        }
     } else {
         zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id), snapshot->id, snapshot);
     }

@@ -177,7 +177,13 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
     ZVAL_STR(&message->message, m);
 
     if (logpoint->callback) {
-        handle_message_callback(logpoint->callback, message);
+        if (handle_message_callback(logpoint->callback, message) != SUCCESS) {
+            php_error_docref(NULL, E_WARNING, "Error running logpoint callback.");
+        }
+        if (EG(exception) != NULL) {
+            zend_clear_exception();
+            php_error_docref(NULL, E_WARNING, "Error running logpoint callback.");
+        }
         destroy_message(message);
     } else {
         zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(collected_messages), message);
