@@ -16,10 +16,13 @@
 
 #include "php.h"
 #include "php_stackdriver_debugger.h"
+#include "stackdriver_debugger_ast.h"
 #include "stackdriver_debugger_logpoint.h"
 
 #if PHP_VERSION_ID < 70100
 #include "standard/php_rand.h"
+#else
+#include "standard/php_mt_rand.h"
 #endif
 
 #ifdef _WIN32
@@ -74,6 +77,7 @@ static void init_logpoint(stackdriver_debugger_logpoint_t *logpoint)
     logpoint->log_level = NULL;
     logpoint->format = NULL;
     logpoint->expressions = NULL;
+    logpoint->callback = NULL;
 }
 
 /* Cleanup an allocated logpoint including freeing memory */
@@ -91,6 +95,11 @@ static void destroy_logpoint(stackdriver_debugger_logpoint_t *logpoint)
 
     if (logpoint->expressions) {
         zend_hash_destroy(logpoint->expressions);
+    }
+
+    if (logpoint->callback) {
+        ZVAL_PTR_DTOR(logpoint->callback);
+        efree(logpoint->callback);
     }
 
     efree(logpoint);
@@ -114,6 +123,22 @@ static void destroy_message(stackdriver_debugger_message_t *message)
     ZVAL_DESTRUCTOR(&message->message);
 
     efree(message);
+}
+
+static int handle_message_callback(zval *callback, stackdriver_debugger_message_t *message)
+{
+    zval callback_result;
+    zval args[3];
+    ZVAL_STR(&args[0], message->log_level);
+    args[1] = message->message;
+    array_init(&args[2]);
+    add_assoc_str(&args[2], "filename", message->filename);
+    add_assoc_long(&args[2], "line", message->lineno);
+
+    if (call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 3, args, 0, NULL) != SUCCESS) {
+        return FAILURE;
+    }
+    return SUCCESS;
 }
 
 /**
@@ -151,14 +176,27 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
     }
     ZVAL_STR(&message->message, m);
 
-    zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(collected_messages), message);
+    if (logpoint->callback) {
+        if (handle_message_callback(logpoint->callback, message) != SUCCESS) {
+            php_error_docref(NULL, E_WARNING, "Error running logpoint callback.");
+        }
+        if (EG(exception) != NULL) {
+            zend_clear_exception();
+            php_error_docref(NULL, E_WARNING, "Error running logpoint callback.");
+        }
+        destroy_message(message);
+    } else {
+        zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(collected_messages), message);
+    }
 }
 
 /**
  * Registers a logpoint for recording. We store the logpoint configuration in a
  * request global HashTable by file which is consulted during file compilation.
  */
-int register_logpoint(zend_string *logpoint_id, zend_string *filename, zend_long lineno, zend_string *log_level, zend_string *condition, zend_string *format, HashTable *expressions)
+int register_logpoint(zend_string *logpoint_id, zend_string *filename,
+    zend_long lineno, zend_string *log_level, zend_string *condition,
+    zend_string *format, HashTable *expressions, zval *callback)
 {
     zval *logpoints, *logpoint_ptr;
     stackdriver_debugger_logpoint_t *logpoint;
@@ -195,11 +233,15 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename, zend_long
         zend_hash_init(logpoint->expressions, expressions->nNumUsed, NULL, ZVAL_PTR_DTOR, 0);
 
         ZEND_HASH_FOREACH_VAL(expressions, expression) {
-            if (valid_debugger_statement(expression) != SUCCESS) {
+            if (valid_debugger_statement(Z_STR_P(expression)) != SUCCESS) {
                 return FAILURE;
             }
             zend_hash_next_index_insert(logpoint->expressions, expression);
         } ZEND_HASH_FOREACH_END();
+    }
+    if (callback != NULL) {
+        logpoint->callback = (zval *)(emalloc(sizeof(zval)));
+        ZVAL_DUP(logpoint->callback, callback);
     }
 
     ZVAL_PTR(logpoint_ptr, logpoint);

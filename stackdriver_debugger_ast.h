@@ -23,6 +23,8 @@ int valid_debugger_statement(zend_string *statement);
 void stackdriver_debugger_ast_process(zend_ast *ast);
 int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS);
 int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS);
+int stackdriver_debugger_ast_rinit(TSRMLS_D);
+int stackdriver_debugger_ast_rshutdown(TSRMLS_D);
 
 PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions);
 

@@ -19,11 +19,11 @@
 #include "stackdriver_debugger_snapshot.h"
 #include "stackdriver_debugger_logpoint.h"
 #include "zend_language_scanner.h"
+#include "zend_exceptions.h"
+#include "main/php_ini.h"
 
 /* True global for storing the original zend_ast_process */
 static void (*original_zend_ast_process)(zend_ast*);
-
-static HashTable *user_whitelisted_functions = NULL;
 
 /**
  * This method generates a new abstract syntax tree that injects a function
@@ -184,7 +184,6 @@ static int inject_ast(zend_ast *ast, zend_ast_list *to_insert)
     } else {
         /* number of nodes */
         num_children = ast->kind >> ZEND_AST_NUM_CHILDREN_SHIFT;
-        // php_printf("num children node: %d\n", num_children);
         for (i = num_children - 1; i >= 0; i--) {
             current = ast->child[i];
             if (inject_ast(current, to_insert) == SUCCESS) {
@@ -281,9 +280,11 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
     return SUCCESS;
 }
 
+/**
+ * Determine if the allowed function call is whitelisted.
+ */
 static int valid_debugger_call(zend_ast *ast)
 {
-    // return FAILURE;
     zend_string *function_name = zend_ast_get_str(ast);
     zval *zv;
     if (function_name) {
@@ -291,8 +292,8 @@ static int valid_debugger_call(zend_ast *ast)
             return SUCCESS;
         }
 
-        if (user_whitelisted_functions &&
-            zend_hash_find(user_whitelisted_functions, function_name) != NULL) {
+        if (STACKDRIVER_DEBUGGER_G(user_whitelisted_functions) &&
+            zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_name) != NULL) {
             return SUCCESS;
         }
     }
@@ -422,6 +423,22 @@ int valid_debugger_statement(zend_string *statement)
     CG(ast_arena) = NULL;
 
     return SUCCESS;
+}
+
+static void register_user_whitelisted_functions_str(const char *str, int len)
+{
+    char *key = NULL, *last = NULL;
+    char *tmp = estrndup(str, len);
+
+    for (key = php_strtok_r(tmp, ",", &last); key; key = php_strtok_r(NULL, ",", &last)) {
+        zend_hash_str_add_empty_element(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), key, strlen(key));
+    }
+    efree(tmp);
+}
+
+static void register_user_whitelisted_functions(zend_string *ini_setting)
+{
+    register_user_whitelisted_functions_str(ZSTR_VAL(ini_setting), ZSTR_LEN(ini_setting));
 }
 
 #define WHITELIST_FUNCTION(function_name) zend_hash_str_add_empty_element(ht, function_name, strlen(function_name))
@@ -671,6 +688,9 @@ static int register_whitelisted_functions(HashTable *ht)
     return SUCCESS;
 }
 
+/**
+ * Request initialization lifecycle hook. Sets up the function whitelist.
+ */
 int stackdriver_debugger_ast_rinit(TSRMLS_D)
 {
     /* Setup storage for whitelisted functions */
@@ -678,17 +698,30 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
     zend_hash_init(STACKDRIVER_DEBUGGER_G(whitelisted_functions), 1024, NULL, ZVAL_PTR_DTOR, 1);
     register_whitelisted_functions(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
 
-    // ALLOC_HASHTABLE(user_whitelisted_functions);
-    // zend_hash_init(user_whitelisted_functions, 8, NULL, ZVAL_PTR_DTOR, 1);
+    ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
+    zend_hash_init(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
+
+    char *ini = php_ini_string(
+        PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS,
+        sizeof(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS) - 1,
+        0
+    );
+    if (ini) {
+        register_user_whitelisted_functions_str(ini, strlen(ini));
+    }
 
     return SUCCESS;
 }
 
+/**
+ * Request shutdown lifecycle hook. Cleans up the function whitelist.
+ */
 int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
 {
-    /* Clean up whitelisted function HashTable memory */
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
+    zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
 
+    return SUCCESS;
 }
 
 /**
@@ -704,11 +737,6 @@ int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS)
     original_zend_ast_process = zend_ast_process;
     zend_ast_process = stackdriver_debugger_ast_process;
 
-    if (user_whitelisted_functions == NULL) {
-        ALLOC_HASHTABLE(user_whitelisted_functions);
-        zend_hash_init(user_whitelisted_functions, 8, NULL, ZVAL_PTR_DTOR, 1);
-    }
-
     return SUCCESS;
 }
 
@@ -719,28 +747,14 @@ int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
 {
     zend_ast_process = original_zend_ast_process;
 
-    zend_hash_destroy(user_whitelisted_functions);
-
     return SUCCESS;
 }
 
+/**
+ * Callback for when the user changes the function whitelist php.ini setting.
+ */
 PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions)
 {
-    if (new_value) {
-        char *key = NULL, *last = NULL;
-        HashTable *ht = user_whitelisted_functions;
-        char *tmp = estrndup(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
-
-        if (user_whitelisted_functions == NULL) {
-            ALLOC_HASHTABLE(user_whitelisted_functions);
-            zend_hash_init(user_whitelisted_functions, 8, NULL, ZVAL_PTR_DTOR, 1);
-        }
-
-        for (key = php_strtok_r(tmp, ",", &last); key; key = php_strtok_r(NULL, ",", &last)) {
-            zend_hash_str_add_empty_element(user_whitelisted_functions, key, strlen(key));
-        }
-        efree(tmp);
-    }
-
+    /* For now do nothing. */
     return SUCCESS;
 }
