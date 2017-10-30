@@ -255,17 +255,9 @@ PHP_FUNCTION(stackdriver_debugger_logpoint)
  *
  * Note: The return zend_string must be released by the caller.
  */
-static zend_string *stackdriver_debugger_full_filename(zend_string *relative_or_full_path, zend_string *current_file)
+static zend_string *stackdriver_debugger_full_filename(zend_string *relative_or_full_path, const char *source_root, int source_root_length)
 {
-    /* Duplicate the string because php_dirname is desctructive */
-    zend_string *current_copy = zend_string_dup(current_file, 1);
-    size_t dirlen = php_dirname(ZSTR_VAL(current_copy), ZSTR_LEN(current_copy));
-    zend_string *dirname = zend_string_init(ZSTR_VAL(current_file), dirlen, 0);
-    zend_string *fullname = strpprintf(ZSTR_LEN(dirname) + 2 + ZSTR_LEN(relative_or_full_path), "%s%c%s", ZSTR_VAL(dirname), DEFAULT_SLASH, ZSTR_VAL(relative_or_full_path));
-    zend_string_release(dirname);
-    zend_string_release(current_copy);
-
-    return fullname;
+    return strpprintf(source_root_length + 2 + ZSTR_LEN(relative_or_full_path), "%s%c%s", source_root, DEFAULT_SLASH, ZSTR_VAL(relative_or_full_path));
 }
 
 /**
@@ -289,7 +281,7 @@ static zend_string *stackdriver_debugger_full_filename(zend_string *relative_or_
  */
 PHP_FUNCTION(stackdriver_debugger_add_snapshot)
 {
-    zend_string *filename, *full_filename, *snapshot_id = NULL, *condition = NULL, *current_file = NULL;
+    zend_string *filename, *full_filename, *snapshot_id = NULL, *condition = NULL, *source_root = NULL;
     zend_long lineno;
     HashTable *options = NULL, *expressions = NULL;
     zval *zv = NULL, *callback = NULL;
@@ -314,9 +306,9 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
             expressions = Z_ARRVAL_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "currentFile", strlen("currentFile"));
+        zv = zend_hash_str_find(options, "sourceRoot", strlen("sourceRoot"));
         if (zv != NULL && !Z_ISNULL_P(zv)) {
-            current_file = Z_STR_P(zv);
+            source_root = Z_STR_P(zv);
         }
 
         zv = zend_hash_str_find(options, "callback", strlen("callback"));
@@ -325,11 +317,15 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
         }
     }
 
-    if (current_file == NULL) {
-        current_file = EX(prev_execute_data)->func->op_array.filename;
-    }
+    if (source_root == NULL) {
+        source_root = zend_string_dup(EX(prev_execute_data)->func->op_array.filename, 1);
+        size_t dirlen = php_dirname(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
 
-    full_filename = stackdriver_debugger_full_filename(filename, current_file);
+        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), dirlen);
+        zend_string_release(source_root);
+    } else {
+        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), ZSTR_LEN(source_root));
+    }
 
     if (register_snapshot(snapshot_id, full_filename, lineno, condition, expressions, callback) != SUCCESS) {
         zend_string_release(full_filename);
@@ -354,12 +350,12 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
  *      @type string $snapshotId
  *      @type string $condition
  *      @type array $expressions
- *      @type string $currentFile
+ *      @type string $sourceRoot
  * }
  */
 PHP_FUNCTION(stackdriver_debugger_add_logpoint)
 {
-    zend_string *filename, *full_filename, *format = NULL, *snapshot_id = NULL, *condition = NULL, *current_file = NULL, *log_level = NULL;
+    zend_string *filename, *full_filename, *format = NULL, *snapshot_id = NULL, *condition = NULL, *source_root = NULL, *log_level = NULL;
     zend_long lineno;
     HashTable *options = NULL, *expressions = NULL;
     zval *zv = NULL, *callback = NULL;
@@ -384,9 +380,9 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
             expressions = Z_ARRVAL_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "currentFile", strlen("currentFile"));
+        zv = zend_hash_str_find(options, "sourceRoot", strlen("sourceRoot"));
         if (zv != NULL && !Z_ISNULL_P(zv)) {
-            current_file = Z_STR_P(zv);
+            source_root = Z_STR_P(zv);
         }
 
         zv = zend_hash_str_find(options, "callback", strlen("callback"));
@@ -395,11 +391,15 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
         }
     }
 
-    if (current_file == NULL) {
-        current_file = EX(prev_execute_data)->func->op_array.filename;
-    }
+    if (source_root == NULL) {
+        source_root = zend_string_dup(EX(prev_execute_data)->func->op_array.filename, 1);
+        size_t dirlen = php_dirname(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
 
-    full_filename = stackdriver_debugger_full_filename(filename, current_file);
+        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), dirlen);
+        zend_string_release(source_root);
+    } else {
+        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), ZSTR_LEN(source_root));
+    }
 
     if (register_logpoint(snapshot_id, full_filename, lineno, log_level, condition, format, expressions, callback) != SUCCESS) {
         zend_string_release(full_filename);

@@ -100,8 +100,8 @@ function:
  *      @type array $expressions An array of additional statements to execute
  *            in the execution context that are captured along with the local
  *            variables in scope.
- *      @type string $currentFile
- *      @type callable $callable
+ *      @type string $sourceRoot
+ *      @type callable $callback
  * }
  */
 function stackdriver_debugger_add_snapshot($filename, $line, $options);
@@ -168,8 +168,8 @@ function:
  *      @type string $snapshotId
  *      @type string $condition
  *      @type array $expressions
- *      @type string $currentFile
- *      @type callable $callable
+ *      @type string $sourceRoot
+ *      @type callable $callback
  * }
  */
 function stackdriver_debugger_add_logpoint($filename, $line, $logLevel, $format, $options);
