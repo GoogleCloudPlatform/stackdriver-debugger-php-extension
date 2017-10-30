@@ -280,9 +280,11 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
     return SUCCESS;
 }
 
+/**
+ * Determine if the allowed function call is whitelisted.
+ */
 static int valid_debugger_call(zend_ast *ast)
 {
-    // return FAILURE;
     zend_string *function_name = zend_ast_get_str(ast);
     zval *zv;
     if (function_name) {
@@ -686,6 +688,9 @@ static int register_whitelisted_functions(HashTable *ht)
     return SUCCESS;
 }
 
+/**
+ * Request initialization lifecycle hook. Sets up the function whitelist.
+ */
 int stackdriver_debugger_ast_rinit(TSRMLS_D)
 {
     /* Setup storage for whitelisted functions */
@@ -708,6 +713,9 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
     return SUCCESS;
 }
 
+/**
+ * Request shutdown lifecycle hook. Cleans up the function whitelist.
+ */
 int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
 {
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
@@ -742,11 +750,11 @@ int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
     return SUCCESS;
 }
 
+/**
+ * Callback for when the user changes the function whitelist php.ini setting.
+ */
 PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions)
 {
-    if (new_value && STACKDRIVER_DEBUGGER_G(user_whitelisted_functions)) {
-        register_user_whitelisted_functions(new_value);
-    }
-
+    /* For now do nothing. */
     return SUCCESS;
 }

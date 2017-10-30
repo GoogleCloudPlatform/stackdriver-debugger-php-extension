@@ -1,7 +1,7 @@
 --TEST--
 Stackdriver Debugger: Allowing multiple whitelisted functions
 --INI--
-stackdriver_debugger.function_whitelist=foo,bar
+stackdriver_debugger.function_whitelist="foo,bar"
 --FILE--
 <?php
 
