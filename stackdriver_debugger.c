@@ -318,11 +318,11 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
     }
 
     if (source_root == NULL) {
-        source_root = zend_string_dup(EX(prev_execute_data)->func->op_array.filename, 1);
-        size_t dirlen = php_dirname(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
-
-        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), dirlen);
-        zend_string_release(source_root);
+        source_root = EX(prev_execute_data)->func->op_array.filename;
+        char *current_file = estrndup(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
+        size_t dirlen = php_dirname(current_file, ZSTR_LEN(source_root));
+        full_filename = stackdriver_debugger_full_filename(filename, current_file, dirlen);
+        efree(current_file);
     } else {
         full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), ZSTR_LEN(source_root));
     }
@@ -392,11 +392,11 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
     }
 
     if (source_root == NULL) {
-        source_root = zend_string_dup(EX(prev_execute_data)->func->op_array.filename, 1);
-        size_t dirlen = php_dirname(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
-
-        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), dirlen);
-        zend_string_release(source_root);
+        source_root = EX(prev_execute_data)->func->op_array.filename;
+        char *current_file = estrndup(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
+        size_t dirlen = php_dirname(current_file, ZSTR_LEN(source_root));
+        full_filename = stackdriver_debugger_full_filename(filename, current_file, dirlen);
+        efree(current_file);
     } else {
         full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), ZSTR_LEN(source_root));
     }
