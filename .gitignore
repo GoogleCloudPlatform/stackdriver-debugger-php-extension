@@ -27,3 +27,5 @@ tests/**/*.out
 tests/**/*.exp
 tests/**/*.diff
 tests/**/*.sh
+vendor/
+composer.lock

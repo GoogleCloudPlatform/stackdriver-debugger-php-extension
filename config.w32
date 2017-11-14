@@ -1,0 +1,9 @@
+// $Id$
+// vim:ft=javascript
+
+ARG_ENABLE("stackdriver_debugger", "stackdriver_debugger support", "no");
+
+if (PHP_STACKDRIVER_DEBUGGER != "no") {
+    EXTENSION('stackdriver_debugger', 'stackdriver_debugger.c stackdriver_debugger_ast.c stackdriver_debugger_logpoint.c stackdriver_debugger_snapshot.c');
+    AC_DEFINE('HAVE_STACKDRIVER_DEBUGGER', 1);
+}
