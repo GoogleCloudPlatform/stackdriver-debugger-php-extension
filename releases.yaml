@@ -1,0 +1,6 @@
+releases:
+  - date: '2017-11-13'
+    time: 16:48:00
+    version: 0.0.1
+    stability: devel
+    notes: First dev release

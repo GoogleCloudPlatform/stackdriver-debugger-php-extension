@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.9.5" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+ <name>stackdriver_debugger</name>
+ <channel>pecl.php.net</channel>
+ <summary>Investigate your code's behavior in production</summary>
+ <description>Stackdriver Debugger is a free, open-source way to debug your running
+ application without requiring a redeployment.
+
+ This library allows you to set breakpoints in your running application that
+ conditionally capture local variable state, stack traces, and more. This library
+ can work in conjunction with the PHP library google/cloud-debugger (available
+ via composer: https://packagist.org/packages/google/cloud-debugger) in
+ order to send collected data to a backend storage server.</description>
+ <lead>
+  <name>Jeff Ching</name>
+  <user>chingor</user>
+  <email>chingor@google.com</email>
+  <active>yes</active>
+ </lead>
+ <date>{{ lastRelease.date }}</date>
+ <time>{{ lastRelease.time }}</time>
+ <version>
+  <release>{{ lastRelease.version }}</release>
+  <api>{{ lastRelease.version }}</api>
+ </version>
+ <stability>
+  <release>{{ lastRelease.stability }}</release>
+  <api>{{ lastRelease.stability }}</api>
+ </stability>
+ <license>Apache 2.0</license>
+ <notes>
+{{ lastRelease.notes }}
+ </notes>
+ <contents>
+  <dir baseinstalldir="/" name="/">
+{% for srcfile in srcfiles %}
+   <file baseinstalldir="/" name="{{srcfile}}" role="src" />
+{% endfor %}
+
+   <file name="README.md" role="doc" />
+   <file name="LICENSE" role="doc" />
+
+   <dir name="tests">
+{% for testfile in testfiles %}
+    <file name="{{ testfile }}" role="test" />
+{% endfor %}
+   </dir>
+  </dir>
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>7.0.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.4.0</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <providesextension>stackdriver_debugger</providesextension>
+ <extsrcrelease />
+ <changelog>
+{% for release in releases %}
+  <release>
+   <version>
+    <release>{{ release.version }}</release>
+    <api>{{ release.version }}</api>
+   </version>
+   <stability>
+    <release>{{ release.stability }}</release>
+    <api>{{ release.stability }}</api>
+   </stability>
+   <date>{{ release.date }}</date>
+   <license>Apache 2.0</license>
+   <notes>
+{{ release.notes }}
+   </notes>
+  </release>
+{% endfor %}
+ </changelog>
+</package>
