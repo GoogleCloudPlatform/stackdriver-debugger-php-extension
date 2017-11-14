@@ -234,6 +234,10 @@ Contributions to this library are always welcome and highly encouraged.
 
 See [CONTRIBUTING](CONTRIBUTING.md) for more information on how to get started.
 
+## Releasing
+
+See [RELEASING](RELEASING.md) for more information on releasing new versions.
+
 ## License
 
 Apache 2.0 - See [LICENSE](LICENSE) for more information.
