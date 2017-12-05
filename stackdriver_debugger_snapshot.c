@@ -337,6 +337,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     snapshot->lineno = lineno;
     if (condition != NULL && ZSTR_LEN(condition) > 0) {
         if (valid_debugger_statement(condition) != SUCCESS) {
+            destroy_snapshot(snapshot);
             return FAILURE;
         }
 
@@ -347,6 +348,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
 
         ZEND_HASH_FOREACH_VAL(expressions, expression) {
             if (valid_debugger_statement(Z_STR_P(expression)) != SUCCESS) {
+                destroy_snapshot(snapshot);
                 return FAILURE;
             }
             zend_hash_next_index_insert(snapshot->expressions, expression);
