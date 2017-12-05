@@ -40,8 +40,6 @@ static void destroy_variable(stackdriver_debugger_variable_t *variable)
         zend_string_release(variable->name);
     }
 
-    ZVAL_PTR_DTOR(&variable->value);
-
     efree(variable);
 }
 

@@ -125,10 +125,6 @@ static int inject_ast(zend_ast *ast, zend_ast_list *to_insert)
         }
     }
 
-    if (ast->lineno > to_insert->lineno) {
-        return FAILURE;
-    }
-
     if (ast->kind == ZEND_AST_STMT_LIST) {
         list = zend_ast_get_list(ast);
 
