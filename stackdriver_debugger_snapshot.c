@@ -519,8 +519,11 @@ int stackdriver_debugger_snapshot_rinit(TSRMLS_D)
 int stackdriver_debugger_snapshot_rshutdown(TSRMLS_D)
 {
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(snapshots_by_file));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(snapshots_by_file));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(snapshots_by_id));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(snapshots_by_id));
 
     return SUCCESS;
 }

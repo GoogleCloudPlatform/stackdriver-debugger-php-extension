@@ -395,7 +395,6 @@ int valid_debugger_statement(zend_string *statement)
 {
     zend_lex_state original_lex_state;
     zend_ast *ast_p;
-    ast_p = emalloc(sizeof(zend_ast*));
 
     /*
      * Append ';' to the end for lexing/parsing. Evaluating the statement
@@ -719,7 +718,9 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
 int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
 {
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
 
     return SUCCESS;
 }

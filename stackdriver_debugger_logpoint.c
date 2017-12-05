@@ -327,7 +327,10 @@ int stackdriver_debugger_logpoint_rinit(TSRMLS_D)
 int stackdriver_debugger_logpoint_rshutdown(TSRMLS_D)
 {
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(collected_messages));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(collected_messages));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(logpoints_by_file));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(logpoints_by_file));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(logpoints_by_id));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(logpoints_by_id));
     return SUCCESS;
 }
