@@ -172,6 +172,7 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
                 zend_string_release(regex);
                 m = replaced;
             }
+            ZVAL_DESTRUCTOR(&retval);
         } ZEND_HASH_FOREACH_END();
     }
     ZVAL_STR(&message->message, m);
