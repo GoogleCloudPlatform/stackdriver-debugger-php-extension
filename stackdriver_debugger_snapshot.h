@@ -42,7 +42,7 @@ typedef struct stackdriver_debugger_snapshot_t {
     zend_string *condition;
     zend_bool fulfilled;
 
-    zval *callback;
+    zval callback;
 
     /* index => zval* (strings) */
     HashTable *expressions;

@@ -100,7 +100,7 @@ static void init_snapshot(stackdriver_debugger_snapshot_t *snapshot)
     zend_hash_init(snapshot->evaluated_expressions, 16, NULL, ZVAL_PTR_DTOR, 0);
     ALLOC_HASHTABLE(snapshot->stackframes);
     zend_hash_init(snapshot->stackframes, 16, NULL, stackframes_dtor, 0);
-    snapshot->callback = NULL;
+    ZVAL_NULL(&snapshot->callback);
 }
 
 /* Cleanup an allocated snapshot including freeing memory */
@@ -120,11 +120,6 @@ static void destroy_snapshot(stackdriver_debugger_snapshot_t *snapshot)
 
     zend_hash_destroy(snapshot->evaluated_expressions);
     FREE_HASHTABLE(snapshot->evaluated_expressions);
-
-    if (snapshot->callback) {
-        ZVAL_PTR_DTOR(snapshot->callback);
-        efree(snapshot->callback);
-    }
 
     zend_hash_destroy(snapshot->stackframes);
     FREE_HASHTABLE(snapshot->stackframes);
@@ -358,8 +353,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
         } ZEND_HASH_FOREACH_END();
     }
     if (callback != NULL) {
-        snapshot->callback = (zval *)(emalloc(sizeof(zval)));
-        ZVAL_DUP(snapshot->callback, callback);
+        ZVAL_DUP(&snapshot->callback, callback);
     }
 
     snapshots = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
@@ -391,7 +385,7 @@ static void capture_execution_state(zend_execute_data *execute_data, stackdriver
         if (execute_data_to_stackframe(ptr, &stackframe) == SUCCESS) {
             zend_hash_next_index_insert_ptr(snapshot->stackframes, stackframe);
         } else {
-            efree(stackframe);
+            destroy_stackframe(stackframe);
         }
         ptr = ptr->prev_execute_data;
     }
@@ -444,8 +438,8 @@ void evaluate_snapshot(zend_execute_data *execute_data, stackdriver_debugger_sna
     capture_expressions(execute_data, snapshot);
 
     /* record as collected */
-    if (snapshot->callback) {
-        if (handle_snapshot_callback(snapshot->callback, snapshot) != SUCCESS) {
+    if (Z_TYPE(snapshot->callback) != IS_NULL) {
+        if (handle_snapshot_callback(&snapshot->callback, snapshot) != SUCCESS) {
             php_error_docref(NULL, E_WARNING, "Error running snapshot callback.");
         }
         if (EG(exception) != NULL) {
