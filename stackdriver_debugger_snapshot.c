@@ -392,6 +392,8 @@ static void capture_execution_state(zend_execute_data *execute_data, stackdriver
         stackframe = (stackdriver_debugger_stackframe_t *)emalloc(sizeof(stackdriver_debugger_stackframe_t)); // FIXME
         if (execute_data_to_stackframe(ptr, &stackframe) == SUCCESS) {
             zend_hash_next_index_insert_ptr(backtrace, stackframe);
+        } else {
+            efree(stackframe);
         }
         ptr = ptr->prev_execute_data;
     }
