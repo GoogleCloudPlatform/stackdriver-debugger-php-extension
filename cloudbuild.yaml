@@ -25,6 +25,10 @@ steps:
     waitFor: ['-']
     id: php72-zts
   - name: gcr.io/cloud-builders/docker
+    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php72', '.']
+    waitFor: ['-']
+    id: php72-gae
+  - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php71', '.']
     waitFor: ['-']
     id: php71-gae
@@ -33,6 +37,6 @@ steps:
     waitFor: ['-']
     id: php70-gae
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-mvm-a/php72:rc3', '.']
+    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php71-debug', '.']
     waitFor: ['-']
-    id: php72-gae
+    id: php71-debug
