@@ -204,8 +204,8 @@ static void stackframes_to_zval(zval *return_value, stackdriver_debugger_snapsho
  */
 static void expressions_to_zval(zval *return_value, stackdriver_debugger_snapshot_t *snapshot)
 {
-    ZVAL_ARR(return_value, snapshot->evaluated_expressions);
-    Z_TRY_ADDREF_P(return_value);
+    array_init(return_value);
+    zend_hash_copy(Z_ARR_P(return_value), snapshot->evaluated_expressions, NULL);
 }
 
 static void snapshot_to_zval(zval *return_value, stackdriver_debugger_snapshot_t *snapshot)
