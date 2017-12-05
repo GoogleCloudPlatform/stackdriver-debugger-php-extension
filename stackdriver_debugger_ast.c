@@ -221,7 +221,7 @@ void stackdriver_debugger_ast_process(zend_ast *ast)
                 snapshot->id,
                 snapshot->lineno
             );
-            int ret = inject_ast(ast, to_insert);
+            inject_ast(ast, to_insert);
         } ZEND_HASH_FOREACH_END();
     }
 
