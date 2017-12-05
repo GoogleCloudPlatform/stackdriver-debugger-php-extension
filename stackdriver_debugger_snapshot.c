@@ -318,10 +318,9 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     zend_long lineno, zend_string *condition, HashTable *expressions,
     zval *callback)
 {
-    zval *snapshots, *snapshot_ptr;
+    HashTable *snapshots;
     stackdriver_debugger_snapshot_t *snapshot;
 
-    PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(snapshot_ptr); // FIXME
     snapshot = emalloc(sizeof(stackdriver_debugger_snapshot_t));
     init_snapshot(snapshot);
 
@@ -362,19 +361,16 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
         ZVAL_DUP(snapshot->callback, callback);
     }
 
-    ZVAL_PTR(snapshot_ptr, snapshot);
-
-    snapshots = zend_hash_find(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
+    snapshots = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
     if (snapshots == NULL) {
-        /* initialize snapshots as array */
-        PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(snapshots); // FIXME
-        array_init(snapshots);
+        ALLOC_HASHTABLE(snapshots);
+        zend_hash_init(snapshots, 4, NULL, ZVAL_PTR_DTOR, 0);
     }
 
-    add_next_index_zval(snapshots, snapshot_ptr);
+    zend_hash_next_index_insert_ptr(snapshots, snapshot);
 
-    zend_hash_update(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename, snapshots);
-    zend_hash_update(STACKDRIVER_DEBUGGER_G(snapshots_by_id), snapshot->id, snapshot_ptr);
+    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename, snapshots);
+    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_id), snapshot->id, snapshot);
 
     return SUCCESS;
 }
@@ -500,6 +496,14 @@ static void snapshot_dtor(zval *zv)
     ZVAL_PTR_DTOR(zv);
 }
 
+static void snapshots_by_file_dtor(zval *zv)
+{
+    HashTable *ht = (HashTable *)Z_PTR_P(zv);
+    zend_hash_destroy(ht);
+    FREE_HASHTABLE(ht);
+    ZVAL_PTR_DTOR(zv);
+}
+
 /**
  * Request initialization lifecycle hook. Initializes request global variables.
  */
@@ -509,7 +513,7 @@ int stackdriver_debugger_snapshot_rinit(TSRMLS_D)
     zend_hash_init(STACKDRIVER_DEBUGGER_G(snapshots_by_id), 16, NULL, snapshot_dtor, 0);
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(snapshots_by_file));
-    zend_hash_init(STACKDRIVER_DEBUGGER_G(snapshots_by_file), 16, NULL, ZVAL_PTR_DTOR, 0);
+    zend_hash_init(STACKDRIVER_DEBUGGER_G(snapshots_by_file), 16, NULL, snapshots_by_file_dtor, 0);
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id));
     zend_hash_init(STACKDRIVER_DEBUGGER_G(collected_snapshots_by_id), 16, NULL, ZVAL_PTR_DTOR, 0);
