@@ -198,10 +198,9 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
     zend_long lineno, zend_string *log_level, zend_string *condition,
     zend_string *format, HashTable *expressions, zval *callback)
 {
-    zval *logpoints, *logpoint_ptr;
+    HashTable *logpoints;
     stackdriver_debugger_logpoint_t *logpoint;
 
-    PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(logpoint_ptr);
     logpoint = emalloc(sizeof(stackdriver_debugger_logpoint_t));
     init_logpoint(logpoint);
 
@@ -244,19 +243,17 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
         ZVAL_DUP(logpoint->callback, callback);
     }
 
-    ZVAL_PTR(logpoint_ptr, logpoint);
-
-    logpoints = zend_hash_find(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename);
+    logpoints = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename);
     if (logpoints == NULL) {
         /* initialize logpoints as array */
-        PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(logpoints);
-        array_init(logpoints);
+        ALLOC_HASHTABLE(logpoints);
+        zend_hash_init(logpoints, 4, NULL, ZVAL_PTR_DTOR, 0);
     }
 
-    add_next_index_zval(logpoints, logpoint_ptr);
+    zend_hash_next_index_insert_ptr(logpoints, logpoint);
 
-    zend_hash_update(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename, logpoints);
-    zend_hash_update(STACKDRIVER_DEBUGGER_G(logpoints_by_id), logpoint->id, logpoint_ptr);
+    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename, logpoints);
+    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_id), logpoint->id, logpoint);
 
     return SUCCESS;
 }
@@ -304,6 +301,14 @@ static void message_dtor(zval *zv)
     ZVAL_PTR_DTOR(zv);
 }
 
+static void logpoints_by_file_dtor(zval *zv)
+{
+    HashTable *ht = (HashTable *)Z_PTR_P(zv);
+    zend_hash_destroy(ht);
+    FREE_HASHTABLE(ht);
+    ZVAL_PTR_DTOR(zv);
+}
+
 /**
  * Request initialization lifecycle hook. Initializes request global variables.
  */
@@ -313,7 +318,7 @@ int stackdriver_debugger_logpoint_rinit(TSRMLS_D)
     zend_hash_init(STACKDRIVER_DEBUGGER_G(logpoints_by_id), 16, NULL, logpoint_dtor, 0);
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(logpoints_by_file));
-    zend_hash_init(STACKDRIVER_DEBUGGER_G(logpoints_by_file), 16, NULL, ZVAL_PTR_DTOR, 0);
+    zend_hash_init(STACKDRIVER_DEBUGGER_G(logpoints_by_file), 16, NULL, logpoints_by_file_dtor, 0);
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(collected_messages));
     zend_hash_init(STACKDRIVER_DEBUGGER_G(collected_messages), 16, NULL, message_dtor, 0);
