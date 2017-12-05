@@ -76,7 +76,8 @@ static void init_logpoint(stackdriver_debugger_logpoint_t *logpoint)
     logpoint->condition = NULL;
     logpoint->log_level = NULL;
     logpoint->format = NULL;
-    logpoint->expressions = NULL;
+    ALLOC_HASHTABLE(logpoint->expressions);
+    zend_hash_init(logpoint->expressions, 4, NULL, ZVAL_PTR_DTOR, 0);
     logpoint->callback = NULL;
 }
 
@@ -93,9 +94,8 @@ static void destroy_logpoint(stackdriver_debugger_logpoint_t *logpoint)
     zend_string_release(logpoint->log_level);
     zend_string_release(logpoint->format);
 
-    if (logpoint->expressions) {
-        zend_hash_destroy(logpoint->expressions);
-    }
+    zend_hash_destroy(logpoint->expressions);
+    FREE_HASHTABLE(logpoint->expressions);
 
     if (logpoint->callback) {
         ZVAL_PTR_DTOR(logpoint->callback);
@@ -227,9 +227,6 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
     }
     if (expressions != NULL) {
         zval *expression;
-
-        ALLOC_HASHTABLE(logpoint->expressions);
-        zend_hash_init(logpoint->expressions, expressions->nNumUsed, NULL, ZVAL_PTR_DTOR, 0);
 
         ZEND_HASH_FOREACH_VAL(expressions, expression) {
             if (valid_debugger_statement(Z_STR_P(expression)) != SUCCESS) {
