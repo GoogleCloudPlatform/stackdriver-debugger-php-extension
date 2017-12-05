@@ -71,6 +71,7 @@ static void destroy_stackframe(stackdriver_debugger_stackframe_t *stackframe)
     for (i = 0; i < stackframe->locals_count; i ++) {
         destroy_variable(stackframe->locals[i]);
     }
+    efree(stackframe->locals);
     efree(stackframe);
 }
 
@@ -117,6 +118,7 @@ static void destroy_snapshot(stackdriver_debugger_snapshot_t *snapshot)
     for (i = 0; i < snapshot->stackframes_count; i++) {
         destroy_stackframe(snapshot->stackframes[i]);
     }
+    efree(snapshot->stackframes);
     efree(snapshot);
 }
 
@@ -277,6 +279,7 @@ static void capture_locals(zend_execute_data *execute_data, stackdriver_debugger
     /* Free symbol table if necessary (potential memory leak) */
     if (allocated != 0) {
         zend_hash_destroy(symbol_table);
+        FREE_HASHTABLE(symbol_table);
     }
 }
 
@@ -318,7 +321,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     zval *snapshots, *snapshot_ptr;
     stackdriver_debugger_snapshot_t *snapshot;
 
-    PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(snapshot_ptr);
+    PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(snapshot_ptr); // FIXME
     snapshot = emalloc(sizeof(stackdriver_debugger_snapshot_t));
     init_snapshot(snapshot);
 
@@ -364,7 +367,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     snapshots = zend_hash_find(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
     if (snapshots == NULL) {
         /* initialize snapshots as array */
-        PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(snapshots);
+        PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(snapshots); // FIXME
         array_init(snapshots);
     }
 
@@ -390,7 +393,7 @@ static void capture_execution_state(zend_execute_data *execute_data, stackdriver
     zend_hash_init(backtrace, 16, NULL, ZVAL_PTR_DTOR, 0);
 
     while (ptr) {
-        stackframe = (stackdriver_debugger_stackframe_t *)emalloc(sizeof(stackdriver_debugger_stackframe_t));
+        stackframe = (stackdriver_debugger_stackframe_t *)emalloc(sizeof(stackdriver_debugger_stackframe_t)); // FIXME
         if (execute_data_to_stackframe(ptr, &stackframe) == SUCCESS) {
             zend_hash_next_index_insert_ptr(backtrace, stackframe);
         }
@@ -405,6 +408,7 @@ static void capture_execution_state(zend_execute_data *execute_data, stackdriver
     } ZEND_HASH_FOREACH_END();
 
     zend_hash_destroy(backtrace);
+    FREE_HASHTABLE(backtrace);
 }
 
 /**

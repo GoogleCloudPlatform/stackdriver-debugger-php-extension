@@ -51,30 +51,30 @@ static zend_ast_list *create_debugger_ast(const char *callback, zend_string *bre
     zend_ast_zval *var, *snapshot_id;
     zend_ast_list *new_list, *arg_list;
 
-    var = emalloc(sizeof(zend_ast_zval));
+    var = emalloc(sizeof(zend_ast_zval)); // FIXME
     var->kind = ZEND_AST_ZVAL;
     ZVAL_STRING(&var->val, callback);
     var->val.u2.lineno = lineno;
 
-    snapshot_id = emalloc(sizeof(zend_ast_zval));
+    snapshot_id = emalloc(sizeof(zend_ast_zval)); // FIXME
     snapshot_id->kind = ZEND_AST_ZVAL;
     ZVAL_STR_COPY(&snapshot_id->val, breakpoint_id);
     snapshot_id->val.u2.lineno = lineno;
 
-    arg_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*));
+    arg_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*)); // FIXME
     arg_list->kind = ZEND_AST_ARG_LIST;
     arg_list->lineno = lineno;
     arg_list->children = 1;
     arg_list->child[0] = (zend_ast*)snapshot_id;
 
-    new_call = emalloc(sizeof(zend_ast) + sizeof(zend_ast*));
+    new_call = emalloc(sizeof(zend_ast) + sizeof(zend_ast*)); // FIXME
     new_call->kind = ZEND_AST_CALL;
     new_call->lineno = lineno;
     new_call->child[0] = (zend_ast*)var;
     new_call->child[1] = (zend_ast*)arg_list;
 
     /* create a new statement list */
-    new_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*));
+    new_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*)); // FIXME
     new_list->kind = ZEND_AST_STMT_LIST;
     new_list->lineno = lineno;
     new_list->children = 2;
@@ -247,7 +247,7 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
 {
     zval source_zval;
 
-    ZVAL_STR_COPY(&source_zval, source);
+    ZVAL_STR(&source_zval, source);
     zend_save_lexical_state(original_lex_state);
 
     if (zend_prepare_string_for_scanning(&source_zval, "") == FAILURE) {
@@ -411,12 +411,16 @@ int valid_debugger_statement(zend_string *statement)
 
     if (valid_debugger_ast(ast_p) != SUCCESS) {
         php_error_docref(NULL, E_WARNING, "Condition contains invalid operations");
+        zend_ast_destroy(CG(ast));
+        zend_arena_destroy(CG(ast_arena));
         zend_restore_lexical_state(&original_lex_state);
         CG(ast) = NULL;
         CG(ast_arena) = NULL;
         return FAILURE;
     }
 
+    zend_ast_destroy(CG(ast));
+    zend_arena_destroy(CG(ast_arena));
     zend_restore_lexical_state(&original_lex_state);
     CG(ast) = NULL;
     CG(ast_arena) = NULL;
