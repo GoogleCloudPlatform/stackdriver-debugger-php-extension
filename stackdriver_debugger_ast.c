@@ -51,34 +51,39 @@ static zend_ast_list *create_debugger_ast(const char *callback, zend_string *bre
     zend_ast_zval *var, *snapshot_id;
     zend_ast_list *new_list, *arg_list;
 
-    var = emalloc(sizeof(zend_ast_zval)); // FIXME
+    var = emalloc(sizeof(zend_ast_zval));
     var->kind = ZEND_AST_ZVAL;
     ZVAL_STRING(&var->val, callback);
     var->val.u2.lineno = lineno;
+    zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(ast_to_clean), var);
 
-    snapshot_id = emalloc(sizeof(zend_ast_zval)); // FIXME
+    snapshot_id = emalloc(sizeof(zend_ast_zval));
     snapshot_id->kind = ZEND_AST_ZVAL;
-    ZVAL_STR_COPY(&snapshot_id->val, breakpoint_id);
+    ZVAL_STR(&snapshot_id->val, breakpoint_id);
     snapshot_id->val.u2.lineno = lineno;
+    zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(ast_to_clean), snapshot_id);
 
-    arg_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*)); // FIXME
+    arg_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*));
     arg_list->kind = ZEND_AST_ARG_LIST;
     arg_list->lineno = lineno;
     arg_list->children = 1;
     arg_list->child[0] = (zend_ast*)snapshot_id;
+    zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(ast_to_clean), arg_list);
 
-    new_call = emalloc(sizeof(zend_ast) + sizeof(zend_ast*)); // FIXME
+    new_call = emalloc(sizeof(zend_ast) + sizeof(zend_ast*));
     new_call->kind = ZEND_AST_CALL;
     new_call->lineno = lineno;
     new_call->child[0] = (zend_ast*)var;
     new_call->child[1] = (zend_ast*)arg_list;
+    zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(ast_to_clean), new_call);
 
     /* create a new statement list */
-    new_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*)); // FIXME
+    new_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*));
     new_list->kind = ZEND_AST_STMT_LIST;
     new_list->lineno = lineno;
     new_list->children = 2;
     new_list->child[0] = new_call;
+    zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(ast_to_clean), new_list);
 
     return new_list;
 }
@@ -691,6 +696,12 @@ static int register_whitelisted_functions(HashTable *ht)
     return SUCCESS;
 }
 
+static void ast_to_clean_dtor(zval *zv)
+{
+    zend_ast *ast = (zend_ast *)Z_PTR_P(zv);
+    efree(ast);
+}
+
 /**
  * Request initialization lifecycle hook. Sets up the function whitelist.
  */
@@ -713,6 +724,9 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
         register_user_whitelisted_functions_str(ini, strlen(ini));
     }
 
+    ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(ast_to_clean));
+    zend_hash_init(STACKDRIVER_DEBUGGER_G(ast_to_clean), 8, NULL, ast_to_clean_dtor, 1);
+
     return SUCCESS;
 }
 
@@ -725,6 +739,8 @@ int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
     FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
     FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
+    zend_hash_destroy(STACKDRIVER_DEBUGGER_G(ast_to_clean));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(ast_to_clean));
 
     return SUCCESS;
 }
