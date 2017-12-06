@@ -128,8 +128,8 @@ static int handle_message_callback(zval *callback, stackdriver_debugger_message_
 {
     zval callback_result;
     zval args[3];
-    ZVAL_STR(&args[0], message->log_level);
-    args[1] = message->message;
+    ZVAL_STR(&args[0], zend_string_copy(message->log_level));
+    ZVAL_COPY(&args[1], &message->message);
     array_init(&args[2]);
     add_assoc_str(&args[2], "filename", message->filename);
     add_assoc_long(&args[2], "line", message->lineno);
