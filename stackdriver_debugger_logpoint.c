@@ -77,8 +77,9 @@ static void init_logpoint(stackdriver_debugger_logpoint_t *logpoint)
     logpoint->condition = NULL;
     logpoint->log_level = NULL;
     logpoint->format = NULL;
-    logpoint->expressions = NULL;
-    logpoint->callback = NULL;
+    ALLOC_HASHTABLE(logpoint->expressions);
+    zend_hash_init(logpoint->expressions, 4, NULL, ZVAL_PTR_DTOR, 0);
+    ZVAL_NULL(&logpoint->callback);
 }
 
 /* Cleanup an allocated logpoint including freeing memory */
@@ -94,13 +95,11 @@ static void destroy_logpoint(stackdriver_debugger_logpoint_t *logpoint)
     zend_string_release(logpoint->log_level);
     zend_string_release(logpoint->format);
 
-    if (logpoint->expressions) {
-        zend_hash_destroy(logpoint->expressions);
-    }
+    zend_hash_destroy(logpoint->expressions);
+    FREE_HASHTABLE(logpoint->expressions);
 
-    if (logpoint->callback) {
-        ZVAL_PTR_DTOR(logpoint->callback);
-        efree(logpoint->callback);
+    if (Z_TYPE(logpoint->callback) != IS_NULL) {
+        ZVAL_DESTRUCTOR(&logpoint->callback);
     }
 
     efree(logpoint);
@@ -130,15 +129,23 @@ static int handle_message_callback(zval *callback, stackdriver_debugger_message_
 {
     zval callback_result;
     zval args[3];
-    ZVAL_STR(&args[0], message->log_level);
-    args[1] = message->message;
+    ZVAL_STR(&args[0], zend_string_copy(message->log_level));
+    ZVAL_COPY(&args[1], &message->message);
     array_init(&args[2]);
     add_assoc_str(&args[2], "filename", message->filename);
     add_assoc_long(&args[2], "line", message->lineno);
 
     if (call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 3, args, 0, NULL) != SUCCESS) {
+        ZVAL_DESTRUCTOR(&args[0]);
+        ZVAL_DESTRUCTOR(&args[1]);
+        ZVAL_DESTRUCTOR(&args[2]);
+        ZVAL_DESTRUCTOR(&callback_result);
         return FAILURE;
     }
+    ZVAL_DESTRUCTOR(&args[0]);
+    ZVAL_DESTRUCTOR(&args[1]);
+    ZVAL_DESTRUCTOR(&args[2]);
+    ZVAL_DESTRUCTOR(&callback_result);
     return SUCCESS;
 }
 
@@ -173,12 +180,13 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
                 zend_string_release(regex);
                 m = replaced;
             }
+            ZVAL_DESTRUCTOR(&retval);
         } ZEND_HASH_FOREACH_END();
     }
     ZVAL_STR(&message->message, m);
 
-    if (logpoint->callback) {
-        if (handle_message_callback(logpoint->callback, message) != SUCCESS) {
+    if (Z_TYPE(logpoint->callback) != IS_NULL) {
+        if (handle_message_callback(&logpoint->callback, message) != SUCCESS) {
             php_error_docref(NULL, E_WARNING, "Error running logpoint callback.");
         }
         if (EG(exception) != NULL) {
@@ -199,10 +207,9 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
     zend_long lineno, zend_string *log_level, zend_string *condition,
     zend_string *format, HashTable *expressions, zval *callback)
 {
-    zval *logpoints, *logpoint_ptr;
+    HashTable *logpoints;
     stackdriver_debugger_logpoint_t *logpoint;
 
-    PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(logpoint_ptr);
     logpoint = emalloc(sizeof(stackdriver_debugger_logpoint_t));
     init_logpoint(logpoint);
 
@@ -230,9 +237,6 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
     if (expressions != NULL) {
         zval *expression;
 
-        ALLOC_HASHTABLE(logpoint->expressions);
-        zend_hash_init(logpoint->expressions, expressions->nNumUsed, NULL, ZVAL_PTR_DTOR, 0);
-
         ZEND_HASH_FOREACH_VAL(expressions, expression) {
             if (valid_debugger_statement(Z_STR_P(expression)) != SUCCESS) {
                 return FAILURE;
@@ -241,23 +245,20 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
         } ZEND_HASH_FOREACH_END();
     }
     if (callback != NULL) {
-        logpoint->callback = (zval *)(emalloc(sizeof(zval)));
-        ZVAL_DUP(logpoint->callback, callback);
+        ZVAL_COPY(&logpoint->callback, callback);
     }
 
-    ZVAL_PTR(logpoint_ptr, logpoint);
-
-    logpoints = zend_hash_find(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename);
+    logpoints = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename);
     if (logpoints == NULL) {
         /* initialize logpoints as array */
-        PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(logpoints);
-        array_init(logpoints);
+        ALLOC_HASHTABLE(logpoints);
+        zend_hash_init(logpoints, 4, NULL, ZVAL_PTR_DTOR, 0);
     }
 
-    add_next_index_zval(logpoints, logpoint_ptr);
+    zend_hash_next_index_insert_ptr(logpoints, logpoint);
 
-    zend_hash_update(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename, logpoints);
-    zend_hash_update(STACKDRIVER_DEBUGGER_G(logpoints_by_id), logpoint->id, logpoint_ptr);
+    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename, logpoints);
+    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_id), logpoint->id, logpoint);
 
     return SUCCESS;
 }
@@ -305,6 +306,14 @@ static void message_dtor(zval *zv)
     ZVAL_PTR_DTOR(zv);
 }
 
+static void logpoints_by_file_dtor(zval *zv)
+{
+    HashTable *ht = (HashTable *)Z_PTR_P(zv);
+    zend_hash_destroy(ht);
+    FREE_HASHTABLE(ht);
+    ZVAL_PTR_DTOR(zv);
+}
+
 /**
  * Request initialization lifecycle hook. Initializes request global variables.
  */
@@ -314,7 +323,7 @@ int stackdriver_debugger_logpoint_rinit(TSRMLS_D)
     zend_hash_init(STACKDRIVER_DEBUGGER_G(logpoints_by_id), 16, NULL, logpoint_dtor, 0);
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(logpoints_by_file));
-    zend_hash_init(STACKDRIVER_DEBUGGER_G(logpoints_by_file), 16, NULL, ZVAL_PTR_DTOR, 0);
+    zend_hash_init(STACKDRIVER_DEBUGGER_G(logpoints_by_file), 16, NULL, logpoints_by_file_dtor, 0);
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(collected_messages));
     zend_hash_init(STACKDRIVER_DEBUGGER_G(collected_messages), 16, NULL, message_dtor, 0);
@@ -328,7 +337,10 @@ int stackdriver_debugger_logpoint_rinit(TSRMLS_D)
 int stackdriver_debugger_logpoint_rshutdown(TSRMLS_D)
 {
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(collected_messages));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(collected_messages));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(logpoints_by_file));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(logpoints_by_file));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(logpoints_by_id));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(logpoints_by_id));
     return SUCCESS;
 }

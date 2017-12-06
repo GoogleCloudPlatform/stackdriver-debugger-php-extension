@@ -29,8 +29,9 @@ typedef struct stackdriver_debugger_stackframe_t {
     zend_string *function;
     zend_string *filename;
     zend_long lineno;
-    int locals_count;
-    stackdriver_debugger_variable_t **locals;
+
+    /* list of stackdriver_debugger_variable_t */
+    HashTable *locals;
 } stackdriver_debugger_stackframe_t;
 
 /* Snapshot struct */
@@ -41,7 +42,7 @@ typedef struct stackdriver_debugger_snapshot_t {
     zend_string *condition;
     zend_bool fulfilled;
 
-    zval *callback;
+    zval callback;
 
     /* index => zval* (strings) */
     HashTable *expressions;
@@ -49,9 +50,8 @@ typedef struct stackdriver_debugger_snapshot_t {
     /* zend_string* (expression) => zval* (result) */
     HashTable *evaluated_expressions;
 
-    int stackframes_count;
-    stackdriver_debugger_stackframe_t **stackframes;
-
+    /* list of stackdriver_debugger_stackframe_t */
+    HashTable *stackframes;
 } stackdriver_debugger_snapshot_t;
 
 void evaluate_snapshot(zend_execute_data *execute_data, stackdriver_debugger_snapshot_t *snapshot);

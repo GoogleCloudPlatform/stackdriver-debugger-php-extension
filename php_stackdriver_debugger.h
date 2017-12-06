@@ -64,6 +64,9 @@ ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
     /* array of stackdriver_debugger_message_t */
     HashTable *collected_messages;
 
+    /* array of pointers to ast node types */
+    HashTable *ast_to_clean;
+
 ZEND_END_MODULE_GLOBALS(stackdriver_debugger)
 
 extern ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)

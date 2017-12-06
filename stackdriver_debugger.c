@@ -457,6 +457,7 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
     stackdriver_debugger_ast_rshutdown(TSRMLS_C);
     stackdriver_debugger_snapshot_rshutdown(TSRMLS_C);
     stackdriver_debugger_logpoint_rshutdown(TSRMLS_C);
+
     return SUCCESS;
 }
 /* }}} */
