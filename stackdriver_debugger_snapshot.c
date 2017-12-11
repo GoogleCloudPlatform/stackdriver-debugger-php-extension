@@ -66,7 +66,7 @@ static void destroy_stackframe(stackdriver_debugger_stackframe_t *stackframe)
 {
     int i;
 
-    if (stackframe->function) {
+    if (stackframe->function && (int)stackframe->function != -1) {
         zend_string_release(stackframe->function);
     }
 
@@ -170,7 +170,7 @@ static void stackframe_to_zval(zval *return_value, stackdriver_debugger_stackfra
     array_init(return_value);
 
     if (stackframe->function) {
-        add_assoc_str(return_value, "function", zend_string_copy(stackframe->function));
+        add_assoc_str(return_value, "function", zend_string_dup(stackframe->function, 0));
     }
     add_assoc_str(return_value, "filename", zend_string_copy(stackframe->filename));
     add_assoc_long(return_value, "line", stackframe->lineno);
@@ -290,15 +290,18 @@ static void capture_locals(zend_execute_data *execute_data, stackdriver_debugger
 /**
  * Capture the execution state from `execute_data`
  */
-static int execute_data_to_stackframe(zend_execute_data *execute_data, stackdriver_debugger_stackframe_t **stackframe_p)
+static stackdriver_debugger_stackframe_t *execute_data_to_stackframe(zend_execute_data *execute_data)
 {
-    stackdriver_debugger_stackframe_t *stackframe = *stackframe_p;
+    stackdriver_debugger_stackframe_t *stackframe;
     zend_op_array *op_array;
     zend_string *funcname;
 
     if (!execute_data->func || !ZEND_USER_CODE(execute_data->func->common.type)) {
-        return FAILURE;
+        return NULL;
     }
+    stackframe = (stackdriver_debugger_stackframe_t *)emalloc(sizeof(stackdriver_debugger_stackframe_t));
+    init_stackframe(stackframe);
+
     op_array = &execute_data->func->op_array;
     funcname = op_array->function_name;
 
@@ -311,7 +314,7 @@ static int execute_data_to_stackframe(zend_execute_data *execute_data, stackdriv
 
     capture_locals(execute_data, stackframe);
 
-    return SUCCESS;
+    return stackframe;
 }
 
 /**
@@ -386,12 +389,9 @@ static void capture_execution_state(zend_execute_data *execute_data, stackdriver
     int i = 0;
 
     while (ptr) {
-        stackframe = (stackdriver_debugger_stackframe_t *)emalloc(sizeof(stackdriver_debugger_stackframe_t));
-        init_stackframe(stackframe);
-        if (execute_data_to_stackframe(ptr, &stackframe) == SUCCESS) {
+        stackframe = execute_data_to_stackframe(ptr);
+        if (stackframe != NULL) {
             zend_hash_next_index_insert_ptr(snapshot->stackframes, stackframe);
-        } else {
-            destroy_stackframe(stackframe);
         }
         ptr = ptr->prev_execute_data;
     }
@@ -421,14 +421,11 @@ static int handle_snapshot_callback(zval *callback, stackdriver_debugger_snapsho
 {
     zval zsnapshot, callback_result;
     snapshot_to_zval(&zsnapshot, snapshot);
-    if (call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 1, &zsnapshot, 0, NULL) != SUCCESS) {
-        ZVAL_DESTRUCTOR(&zsnapshot);
-        ZVAL_DESTRUCTOR(&callback_result);
-        return FAILURE;
-    }
+    int call_result = call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 1, &zsnapshot, 0, NULL);
+
     ZVAL_DESTRUCTOR(&zsnapshot);
     ZVAL_DESTRUCTOR(&callback_result);
-    return SUCCESS;
+    return call_result;
 }
 
 /**
