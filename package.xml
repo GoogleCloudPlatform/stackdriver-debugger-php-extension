@@ -17,8 +17,8 @@
   <email>chingor@google.com</email>
   <active>yes</active>
  </lead>
- <date>2017-11-13</date>
- <time>16:48:00</time>
+ <date>2017-12-11</date>
+ <time>14:17:00</time>
  <version>
   <release>0.0.1</release>
   <api>0.0.1</api>
@@ -49,10 +49,53 @@ First dev release
    <file name="LICENSE" role="doc" />
 
    <dir name="tests">
-    <file name="common.php" role="test" />
-    <file name="function_whitelist.phpt" role="test" />
-    <file name="function_whitelist_multiple.phpt" role="test" />
-    <file name="statement_validity.phpt" role="test" />
+    <file name="ast/bracketed_namespaced_code.php" role="test" />
+    <file name="ast/code.php" role="test" />
+    <file name="ast/simple_namespaced_code.php" role="test" />
+    <file name="logpoints/loop.php" role="test" />
+    <file name="snapshots/line_numbers.php" role="test" />
+    <file name="snapshots/loop.php" role="test" />
+    <file name="ast/ast_bracketed_namespaced_function.phpt" role="test" />
+    <file name="ast/ast_closure.phpt" role="test" />
+    <file name="ast/ast_do_while.phpt" role="test" />
+    <file name="ast/ast_else.phpt" role="test" />
+    <file name="ast/ast_for.phpt" role="test" />
+    <file name="ast/ast_foreach.phpt" role="test" />
+    <file name="ast/ast_if.phpt" role="test" />
+    <file name="ast/ast_method.phpt" role="test" />
+    <file name="ast/ast_namespaced_function.phpt" role="test" />
+    <file name="ast/ast_switch.phpt" role="test" />
+    <file name="ast/ast_switch_default.phpt" role="test" />
+    <file name="ast/ast_while.phpt" role="test" />
+    <file name="logpoints/basic_logpoint.phpt" role="test" />
+    <file name="logpoints/callback.phpt" role="test" />
+    <file name="logpoints/callback_context.phpt" role="test" />
+    <file name="logpoints/callback_exception.phpt" role="test" />
+    <file name="logpoints/escaped_expressions.phpt" role="test" />
+    <file name="logpoints/expressions.phpt" role="test" />
+    <file name="logpoints/log_condition.phpt" role="test" />
+    <file name="logpoints/log_multiple_times.phpt" role="test" />
+    <file name="logpoints/missing_expressions.phpt" role="test" />
+    <file name="logpoints/multiple_logpoints.phpt" role="test" />
+    <file name="logpoints/multiple_logpoints_callback.phpt" role="test" />
+    <file name="logpoints/repeated_expressions.phpt" role="test" />
+    <file name="logpoints/source_root.phpt" role="test" />
+    <file name="snapshots/basic_variable_dump.phpt" role="test" />
+    <file name="snapshots/callback.phpt" role="test" />
+    <file name="snapshots/callback_exception.phpt" role="test" />
+    <file name="snapshots/conditional_empty.phpt" role="test" />
+    <file name="snapshots/conditional_match.phpt" role="test" />
+    <file name="snapshots/conditional_null.phpt" role="test" />
+    <file name="snapshots/conditional_warning.phpt" role="test" />
+    <file name="snapshots/expressions.phpt" role="test" />
+    <file name="snapshots/expressions_warning.phpt" role="test" />
+    <file name="snapshots/first_line_test.phpt" role="test" />
+    <file name="snapshots/invalid_condition.phpt" role="test" />
+    <file name="snapshots/multiple_snapshots.phpt" role="test" />
+    <file name="snapshots/multiple_snapshots_callback.phpt" role="test" />
+    <file name="snapshots/null_snapshot_id.phpt" role="test" />
+    <file name="snapshots/second_line_test.phpt" role="test" />
+    <file name="snapshots/source_root.phpt" role="test" />
    </dir>
   </dir>
  </contents>
@@ -78,7 +121,7 @@ First dev release
     <release>devel</release>
     <api>devel</api>
    </stability>
-   <date>2017-11-13</date>
+   <date>2017-12-11</date>
    <license>Apache 2.0</license>
    <notes>
 First dev release
