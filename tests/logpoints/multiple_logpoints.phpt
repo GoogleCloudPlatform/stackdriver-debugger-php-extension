@@ -28,7 +28,7 @@ array(11) {
   [0]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -41,7 +41,7 @@ array(11) {
   [1]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -54,7 +54,7 @@ array(11) {
   [2]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -67,7 +67,7 @@ array(11) {
   [3]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -80,7 +80,7 @@ array(11) {
   [4]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -93,7 +93,7 @@ array(11) {
   [5]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -106,7 +106,7 @@ array(11) {
   [6]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -119,7 +119,7 @@ array(11) {
   [7]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -132,7 +132,7 @@ array(11) {
   [8]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -145,7 +145,7 @@ array(11) {
   [9]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(7)
     ["message"]=>
@@ -158,7 +158,7 @@ array(11) {
   [10]=>
   array(5) {
     ["filename"]=>
-    string(35) "%s/loop.php"
+    string(%d) "%s/loop.php"
     ["line"]=>
     int(12)
     ["message"]=>
