@@ -29,20 +29,19 @@ var_dump($logpoints);
 ?>
 --EXPECTF--
 bool(true)
+bool(true)
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint 2 hit!
 Sum is 45
-Number of logpoints: 1
-array(1) {
-  [0]=>
-  array(5) {
-    ["filename"]=>
-    string(%d) "%sloop.php"
-    ["line"]=>
-    int(12)
-    ["message"]=>
-    string(13) "Logpoint hit!"
-    ["timestamp"]=>
-    int(%d)
-    ["level"]=>
-    string(4) "INFO"
-  }
+Number of logpoints: 0
+array(0) {
 }

@@ -21,13 +21,144 @@ var_dump($logpoints);
 ?>
 --EXPECTF--
 bool(true)
+bool(true)
 Sum is 45
-Number of logpoints: 1
-array(1) {
+Number of logpoints: 11
+array(11) {
   [0]=>
   array(5) {
     ["filename"]=>
-    string(%d) "%sloop.php"
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [1]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [2]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [3]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [4]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [5]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [6]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [7]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [8]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [9]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
+    ["line"]=>
+    int(7)
+    ["message"]=>
+    string(20) "Logpoint inner loop!"
+    ["timestamp"]=>
+    int(%d)
+    ["level"]=>
+    string(4) "INFO"
+  }
+  [10]=>
+  array(5) {
+    ["filename"]=>
+    string(35) "%s/loop.php"
     ["line"]=>
     int(12)
     ["message"]=>
