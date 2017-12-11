@@ -253,14 +253,24 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
         /* initialize logpoints as array */
         ALLOC_HASHTABLE(logpoints);
         zend_hash_init(logpoints, 4, NULL, ZVAL_PTR_DTOR, 0);
+        zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename, logpoints);
     }
 
     zend_hash_next_index_insert_ptr(logpoints, logpoint);
-
-    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename, logpoints);
     zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_id), logpoint->id, logpoint);
 
     return SUCCESS;
+}
+
+static void message_to_zval(zval *return_value, stackdriver_debugger_message_t *message)
+{
+    array_init(return_value);
+
+    add_assoc_str(return_value, "filename", message->filename);
+    add_assoc_long(return_value, "line", message->lineno);
+    add_assoc_zval(return_value, "message", &message->message);
+    add_assoc_long(return_value, "timestamp", message->timestamp);
+    add_assoc_str(return_value, "level", message->log_level);
 }
 
 /**
@@ -271,13 +281,7 @@ void list_logpoints(zval *return_value)
     stackdriver_debugger_message_t *message;
     ZEND_HASH_FOREACH_PTR(STACKDRIVER_DEBUGGER_G(collected_messages), message) {
         zval zmessage;
-        array_init(&zmessage);
-
-        add_assoc_str(&zmessage, "filename", message->filename);
-        add_assoc_long(&zmessage, "line", message->lineno);
-        add_assoc_zval(&zmessage, "message", &message->message);
-        add_assoc_long(&zmessage, "timestamp", message->timestamp);
-        add_assoc_str(&zmessage, "level", message->log_level);
+        message_to_zval(&zmessage, message);
         add_next_index_zval(return_value, &zmessage);
     } ZEND_HASH_FOREACH_END();
 }
