@@ -5,7 +5,7 @@ Stackdriver Debugger: Basic variable dump
 
 // set a snapshot for line 7 in loop.php ($sum += $i)
 var_dump(stackdriver_debugger_add_snapshot('loop.php', 7, ['callback' => 'handleSnapshot']));
-var_dump(stackdriver_debugger_add_snapshot('loop.php', 7, ['callback' => 'handleSnapshot']));
+var_dump(stackdriver_debugger_add_snapshot('loop.php', 9, ['callback' => 'handleSnapshot']));
 
 function handleSnapshot($breakpoint)
 {
@@ -63,7 +63,7 @@ array(4) {
   }
 }
 Number of stackframes: 2
-loop.php:7
+loop.php:9
 multiple_snapshots_callback.php:21
 array(4) {
   [0]=>
@@ -78,14 +78,14 @@ array(4) {
     ["name"]=>
     string(3) "sum"
     ["value"]=>
-    int(0)
+    int(6)
   }
   [2]=>
   array(2) {
     ["name"]=>
     string(1) "i"
     ["value"]=>
-    int(0)
+    int(3)
   }
   [3]=>
   array(2) {

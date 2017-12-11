@@ -5,7 +5,7 @@ Stackdriver Debugger: Basic variable dump
 
 // set a snapshot for line 7 in loop.php ($sum += $i)
 var_dump(stackdriver_debugger_add_snapshot('loop.php', 7));
-var_dump(stackdriver_debugger_add_snapshot('loop.php', 7));
+var_dump(stackdriver_debugger_add_snapshot('loop.php', 9));
 
 require_once(__DIR__ . '/loop.php');
 

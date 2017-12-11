@@ -170,9 +170,9 @@ static void stackframe_to_zval(zval *return_value, stackdriver_debugger_stackfra
     array_init(return_value);
 
     if (stackframe->function) {
-        add_assoc_str(return_value, "function", stackframe->function);
+        add_assoc_str(return_value, "function", zend_string_copy(stackframe->function));
     }
-    add_assoc_str(return_value, "filename", stackframe->filename);
+    add_assoc_str(return_value, "filename", zend_string_copy(stackframe->filename));
     add_assoc_long(return_value, "line", stackframe->lineno);
 
     zval locals;
@@ -367,11 +367,10 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     if (snapshots == NULL) {
         ALLOC_HASHTABLE(snapshots);
         zend_hash_init(snapshots, 4, NULL, ZVAL_PTR_DTOR, 0);
+        zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename, snapshots);
     }
 
     zend_hash_next_index_insert_ptr(snapshots, snapshot);
-
-    zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename, snapshots);
     zend_hash_update_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_id), snapshot->id, snapshot);
 
     return SUCCESS;
