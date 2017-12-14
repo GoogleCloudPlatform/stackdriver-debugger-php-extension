@@ -25,6 +25,7 @@
 /* True global for storing the original zend_ast_process */
 static void (*original_zend_ast_process)(zend_ast*);
 
+/* map of function name -> empty null zval */
 static HashTable global_whitelisted_functions;
 
 /**
