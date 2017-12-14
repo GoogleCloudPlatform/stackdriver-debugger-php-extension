@@ -248,18 +248,27 @@ PHP_FUNCTION(stackdriver_debugger_logpoint)
 {
     zend_string *logpoint_id = NULL;
     stackdriver_debugger_logpoint_t *logpoint;
+    double start = 0;
+
+    // if we've already spent more than the time allowed, skip further breakpoints
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+        RETURN_FALSE;
+    }
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &logpoint_id) == FAILURE) {
         RETURN_FALSE;
     }
 
+    start = stackdriver_debugger_now();
     logpoint = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_id), logpoint_id);
 
     if (logpoint == NULL || test_conditional(logpoint->condition) != SUCCESS) {
+        STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
         RETURN_FALSE;
     }
 
     evaluate_logpoint(execute_data, logpoint);
+    STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
 
     RETURN_TRUE;
 }
