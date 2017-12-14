@@ -25,6 +25,8 @@
 /* True global for storing the original zend_ast_process */
 static void (*original_zend_ast_process)(zend_ast*);
 
+static HashTable global_whitelisted_functions;
+
 /**
  * This method generates a new abstract syntax tree that injects a function
  * call to `stackdriver_debugger()`.
@@ -293,7 +295,7 @@ static int valid_debugger_call(zend_ast *ast)
     zend_string *function_name = zend_ast_get_str(ast);
     zval *zv;
     if (function_name) {
-        if (zend_hash_find(STACKDRIVER_DEBUGGER_G(whitelisted_functions), function_name) != NULL) {
+        if (zend_hash_find(&global_whitelisted_functions, function_name) != NULL) {
             return SUCCESS;
         }
 
@@ -707,10 +709,6 @@ static void ast_to_clean_dtor(zval *zv)
  */
 int stackdriver_debugger_ast_rinit(TSRMLS_D)
 {
-    /* Setup storage for whitelisted functions */
-    ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
-    zend_hash_init(STACKDRIVER_DEBUGGER_G(whitelisted_functions), 1024, NULL, ZVAL_PTR_DTOR, 1);
-    register_whitelisted_functions(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
     zend_hash_init(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
@@ -735,8 +733,6 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
  */
 int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
 {
-    zend_hash_destroy(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
-    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(whitelisted_functions));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
     FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(ast_to_clean));
@@ -758,6 +754,9 @@ int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS)
     original_zend_ast_process = zend_ast_process;
     zend_ast_process = stackdriver_debugger_ast_process;
 
+    /* Setup storage for whitelisted functions */
+    zend_hash_init(&global_whitelisted_functions, 1024, NULL, NULL, 1);
+    register_whitelisted_functions(&global_whitelisted_functions);
     return SUCCESS;
 }
 
@@ -767,6 +766,7 @@ int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS)
 int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
 {
     zend_ast_process = original_zend_ast_process;
+    zend_hash_destroy(&global_whitelisted_functions);
 
     return SUCCESS;
 }

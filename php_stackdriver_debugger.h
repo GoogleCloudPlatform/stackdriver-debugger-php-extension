@@ -43,7 +43,6 @@ PHP_RINIT_FUNCTION(stackdriver_debugger);
 PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger);
 
 ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
-    HashTable *whitelisted_functions;
     HashTable *user_whitelisted_functions;
 
     /* map of filename -> stackdriver_debugger_snapshot[] */
