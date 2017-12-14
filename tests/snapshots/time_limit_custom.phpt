@@ -8,7 +8,7 @@ stackdriver_debugger.max_time=14
 function handle_snapshot($breakpoint)
 {
     echo "Breakpoint hit!" . PHP_EOL;
-    usleep(9000);
+    usleep(10000);
 }
 
 // set a snapshot for line 7 in loop.php ($sum += $i)
