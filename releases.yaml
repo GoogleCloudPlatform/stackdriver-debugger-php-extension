@@ -4,3 +4,9 @@ releases:
     version: 0.0.1
     stability: devel
     notes: First dev release
+
+  - date: '2017-12-11'
+    time: 17:02:00
+    version: 0.0.2
+    stability: devel
+    notes: Fix windows build configuration

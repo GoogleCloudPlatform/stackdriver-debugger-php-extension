@@ -18,10 +18,10 @@
   <active>yes</active>
  </lead>
  <date>2017-12-11</date>
- <time>14:17:00</time>
+ <time>17:02:00</time>
  <version>
-  <release>0.0.1</release>
-  <api>0.0.1</api>
+  <release>0.0.2</release>
+  <api>0.0.2</api>
  </version>
  <stability>
   <release>devel</release>
@@ -29,7 +29,7 @@
  </stability>
  <license>Apache 2.0</license>
  <notes>
-First dev release
+Fix windows build configuration
  </notes>
  <contents>
   <dir baseinstalldir="/" name="/">
@@ -125,6 +125,21 @@ First dev release
    <license>Apache 2.0</license>
    <notes>
 First dev release
+   </notes>
+  </release>
+  <release>
+   <version>
+    <release>0.0.2</release>
+    <api>0.0.2</api>
+   </version>
+   <stability>
+    <release>devel</release>
+    <api>devel</api>
+   </stability>
+   <date>2017-12-11</date>
+   <license>Apache 2.0</license>
+   <notes>
+Fix windows build configuration
    </notes>
   </release>
  </changelog>
