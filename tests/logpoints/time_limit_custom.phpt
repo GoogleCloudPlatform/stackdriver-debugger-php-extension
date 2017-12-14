@@ -7,7 +7,7 @@ stackdriver_debugger.max_time=14
 
 function logpoint_callback($level, $message) {
     echo "logpoint: $level - $message" . PHP_EOL;
-    usleep(2000); // sleep 2ms
+    usleep(3000); // sleep 2ms
 }
 // set a snapshot for line 7 in loop.php ($sum += $i)
 var_dump(stackdriver_debugger_add_logpoint('loop.php', 7, 'INFO', 'Logpoint hit!', [
@@ -22,8 +22,6 @@ echo "Sum is {$sum}\n";
 ?>
 --EXPECTF--
 bool(true)
-logpoint: INFO - Logpoint hit!
-logpoint: INFO - Logpoint hit!
 logpoint: INFO - Logpoint hit!
 logpoint: INFO - Logpoint hit!
 logpoint: INFO - Logpoint hit!

@@ -21,6 +21,7 @@
 #include "zend_language_scanner.h"
 #include "zend_exceptions.h"
 #include "main/php_ini.h"
+#include "zend_ini.h"
 
 /* True global for storing the original zend_ast_process */
 static void (*original_zend_ast_process)(zend_ast*);
@@ -714,11 +715,7 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
     zend_hash_init(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
 
-    char *ini = php_ini_string(
-        PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS,
-        sizeof(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS) - 1,
-        0
-    );
+    char *ini = INI_STR(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS);
     if (ini) {
         register_user_whitelisted_functions_str(ini, strlen(ini));
     }
