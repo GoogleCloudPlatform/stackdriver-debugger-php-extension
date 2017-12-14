@@ -23,6 +23,7 @@
 #include "stackdriver_debugger_logpoint.h"
 #include "stackdriver_debugger_snapshot.h"
 #include "zend_exceptions.h"
+#include "stackdriver_debugger_time_functions.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
 
@@ -208,18 +209,31 @@ PHP_FUNCTION(stackdriver_debugger_snapshot)
 {
     zend_string *snapshot_id = NULL;
     stackdriver_debugger_snapshot_t *snapshot;
+    double start = 0;
+
+    // if we've already spent more than the time allowed, skip further breakpoints
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+        RETURN_FALSE;
+    }
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &snapshot_id) == FAILURE) {
         RETURN_FALSE;
     }
 
+    start = stackdriver_debugger_now();
     snapshot = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_id), snapshot_id);
 
+    if (snapshot->fulfilled) {
+        RETURN_FALSE;
+    }
+
     if (snapshot == NULL || test_conditional(snapshot->condition) != SUCCESS) {
+        STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
         RETURN_FALSE;
     }
 
     evaluate_snapshot(execute_data, snapshot);
+    STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
 
     RETURN_TRUE;
 }
@@ -443,6 +457,9 @@ PHP_MSHUTDOWN_FUNCTION(stackdriver_debugger)
 
 PHP_RINIT_FUNCTION(stackdriver_debugger)
 {
+    STACKDRIVER_DEBUGGER_G(time_spent) = 0;
+    STACKDRIVER_DEBUGGER_G(max_time) = 0.01;
+
     stackdriver_debugger_ast_rinit(TSRMLS_C);
     stackdriver_debugger_snapshot_rinit(TSRMLS_C);
     stackdriver_debugger_logpoint_rinit(TSRMLS_C);

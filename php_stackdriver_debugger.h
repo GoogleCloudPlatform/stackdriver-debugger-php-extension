@@ -28,10 +28,6 @@
 #define PHP_STACKDRIVER_DEBUGGER_EXTNAME "stackdriver_debugger"
 #define PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS "stackdriver_debugger.function_whitelist"
 
-#define PHP_STACKDRIVER_DEBUGGER_MAKE_STD_ZVAL(pzv) \
-  pzv = (zval *)emalloc(sizeof(zval));
-#define PHP_STACKDRIVER_DEBUGGER_FREE_STD_ZVAL(pzv) efree(pzv);
-
 PHP_FUNCTION(stackdriver_debugger_version);
 
 extern zend_module_entry stackdriver_debugger_module_entry;
@@ -66,6 +62,9 @@ ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
 
     /* array of pointers to ast node types */
     HashTable *ast_to_clean;
+
+    double time_spent;
+    double max_time;
 
 ZEND_END_MODULE_GLOBALS(stackdriver_debugger)
 
