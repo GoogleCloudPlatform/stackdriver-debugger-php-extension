@@ -3,11 +3,8 @@ Stackdriver Debugger: Logpoints should not spend more than 10ms
 --FILE--
 <?php
 
-$count = 0;
-
 function logpoint_callback($level, $message) {
-    global $count;
-    $count++;
+    echo "logpoint: $level - $message" . PHP_EOL;
     usleep(3000); // sleep 3ms
 }
 // set a snapshot for line 7 in loop.php ($sum += $i)
@@ -19,9 +16,12 @@ require_once(__DIR__ . '/loop.php');
 
 $sum = loop(10);
 
-$res = $count <= 4;
-echo "Ran 4 or fewer times: $res\n";
+echo "Sum is {$sum}\n";
 ?>
 --EXPECTF--
 bool(true)
-Ran 4 or fewer times: 1
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+logpoint: INFO - Logpoint hit!
+Sum is 45
