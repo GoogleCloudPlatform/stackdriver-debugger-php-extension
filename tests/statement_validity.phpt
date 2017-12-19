@@ -21,7 +21,8 @@ $statements = [
     // whitelisted function
     'count(array([])) == 0',
     'count([]) == 0',
-    'count(array_keys([])) == 0'
+    'count(array_keys([])) == 0',
+    'Foo\Bar::asdf()',
 ];
 
 foreach ($statements as $statement) {
@@ -47,3 +48,4 @@ statement: 'asdf->foo;' valid: false
 statement: 'count(array([])) == 0' valid: true
 statement: 'count([]) == 0' valid: true
 statement: 'count(array_keys([])) == 0' valid: true
+statement: 'Foo\Bar::asdf()' valid: false
