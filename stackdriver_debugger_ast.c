@@ -773,11 +773,11 @@ int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
  */
 PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions)
 {
+    /* Only use this mechanism for ini_set (runtime stage) */
     if (new_value != NULL && stage & ZEND_INI_STAGE_RUNTIME) {
         zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
         zend_hash_init(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
         register_user_whitelisted_functions_str(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
     }
-    /* For now do nothing. */
     return SUCCESS;
 }

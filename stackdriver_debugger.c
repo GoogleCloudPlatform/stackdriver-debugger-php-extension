@@ -470,7 +470,6 @@ PHP_MSHUTDOWN_FUNCTION(stackdriver_debugger)
 PHP_RINIT_FUNCTION(stackdriver_debugger)
 {
     STACKDRIVER_DEBUGGER_G(time_spent) = 0;
-    // STACKDRIVER_DEBUGGER_G(max_time) = 0.001 * INI_INT(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME);
 
     stackdriver_debugger_ast_rinit(TSRMLS_C);
     stackdriver_debugger_snapshot_rinit(TSRMLS_C);
@@ -496,7 +495,6 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
  */
 PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time)
 {
-    /* For now do nothing. */
     if (new_value != NULL) {
         STACKDRIVER_DEBUGGER_G(max_time) = 0.001 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0);
     }
