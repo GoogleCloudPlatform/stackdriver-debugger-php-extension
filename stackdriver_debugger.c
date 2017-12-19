@@ -491,7 +491,7 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
 /* }}} */
 
 /**
- * Callback for when the user changes the function whitelist php.ini setting.
+ * Callback for when the user changes the max_time php.ini setting.
  */
 PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time)
 {
