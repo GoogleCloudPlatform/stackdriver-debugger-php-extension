@@ -23,6 +23,7 @@
 #include "stackdriver_debugger_logpoint.h"
 #include "stackdriver_debugger_snapshot.h"
 #include "zend_exceptions.h"
+#include "stackdriver_debugger_time_functions.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
 
@@ -90,9 +91,12 @@ zend_module_entry stackdriver_debugger_module_entry = {
 
 ZEND_GET_MODULE(stackdriver_debugger)
 
+PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time);
+
 /* Registers php.ini directives */
 PHP_INI_BEGIN()
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS, NULL, PHP_INI_ALL, OnUpdate_stackdriver_debugger_whitelisted_functions)
+    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME, "10", PHP_INI_ALL, OnUpdate_stackdriver_debugger_max_time)
 PHP_INI_END()
 
 /**
@@ -208,18 +212,31 @@ PHP_FUNCTION(stackdriver_debugger_snapshot)
 {
     zend_string *snapshot_id = NULL;
     stackdriver_debugger_snapshot_t *snapshot;
+    double start = 0;
+
+    // if we've already spent more than the time allowed, skip further breakpoints
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+        RETURN_FALSE;
+    }
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &snapshot_id) == FAILURE) {
         RETURN_FALSE;
     }
 
+    start = stackdriver_debugger_now();
     snapshot = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_id), snapshot_id);
 
+    if (snapshot->fulfilled) {
+        RETURN_FALSE;
+    }
+
     if (snapshot == NULL || test_conditional(snapshot->condition) != SUCCESS) {
+        STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
         RETURN_FALSE;
     }
 
     evaluate_snapshot(execute_data, snapshot);
+    STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
 
     RETURN_TRUE;
 }
@@ -234,18 +251,27 @@ PHP_FUNCTION(stackdriver_debugger_logpoint)
 {
     zend_string *logpoint_id = NULL;
     stackdriver_debugger_logpoint_t *logpoint;
+    double start = 0;
+
+    // if we've already spent more than the time allowed, skip further breakpoints
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+        RETURN_FALSE;
+    }
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &logpoint_id) == FAILURE) {
         RETURN_FALSE;
     }
 
+    start = stackdriver_debugger_now();
     logpoint = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(logpoints_by_id), logpoint_id);
 
     if (logpoint == NULL || test_conditional(logpoint->condition) != SUCCESS) {
+        STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
         RETURN_FALSE;
     }
 
     evaluate_logpoint(execute_data, logpoint);
+    STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
 
     RETURN_TRUE;
 }
@@ -443,6 +469,8 @@ PHP_MSHUTDOWN_FUNCTION(stackdriver_debugger)
 
 PHP_RINIT_FUNCTION(stackdriver_debugger)
 {
+    STACKDRIVER_DEBUGGER_G(time_spent) = 0;
+
     stackdriver_debugger_ast_rinit(TSRMLS_C);
     stackdriver_debugger_snapshot_rinit(TSRMLS_C);
     stackdriver_debugger_logpoint_rinit(TSRMLS_C);
@@ -461,3 +489,14 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
     return SUCCESS;
 }
 /* }}} */
+
+/**
+ * Callback for when the user changes the max_time php.ini setting.
+ */
+PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time)
+{
+    if (new_value != NULL) {
+        STACKDRIVER_DEBUGGER_G(max_time) = 0.001 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0);
+    }
+    return SUCCESS;
+}

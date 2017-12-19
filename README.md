@@ -199,6 +199,49 @@ following fields:
 * `timestamp` - int - UNIX timestamp
 * `level` - string - log level
 
+## Configuration
+
+### Max Time Limit
+
+By default, we restrict time spent in the debugger to 10ms per request, but will
+allow the running snapshot or logpoint to finish. Any future snapshots or
+logpoints within the request will not trigger.
+
+You can customize this limit by setting the ini config
+`stackdriver_debugger.max_time`:
+
+```
+# in php.ini
+stackdriver_debugger.max_time=50
+```
+
+or
+
+```php
+ini_set('stackdriver_debugger.max_time', '50');
+```
+
+### Whitelisting Function Calls in Conditions and Evaluated Expressions
+
+Setting a snapshot or logpoint should not affect the state of any application.
+By default, we disallow any unknown function calls that could potentially
+modify the state of your application.
+
+You can add additional function calls to this list by setting the ini config
+`stackdriver_debugger.function_whitelist`:
+
+```
+# in php.ini
+stackdriver_debugger.function_whitelist="foo,bar,MyClass::function"
+```
+
+```php
+ini_set('stackdriver_debugger.function_whitelist', 'foo,bar,MyClass::function');
+```
+
+Note that all function names specified here must be declared with their full
+namespace if applicable.
+
 ## Versioning
 
 You can retrieve the version of this extension at runtime.

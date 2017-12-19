@@ -19,17 +19,12 @@
 #include "stackdriver_debugger_ast.h"
 #include "stackdriver_debugger_logpoint.h"
 #include "zend_exceptions.h"
+#include "stackdriver_debugger_time_functions.h"
 
 #if PHP_VERSION_ID < 70100
 #include "standard/php_rand.h"
 #else
 #include "standard/php_mt_rand.h"
-#endif
-
-#ifdef _WIN32
-#include "win32/time.h"
-#else
-#include <sys/time.h>
 #endif
 
 #include "ext/pcre/php_pcre.h"
@@ -58,15 +53,6 @@
         NULL \
     )
 #endif
-
-/* Return the current timestamp as a double */
-static double stackdriver_debugger_now()
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-
-    return (double) (tv.tv_sec + tv.tv_usec / 1000000.00);
-}
 
 /* Initialize an empty, allocated logpoint */
 static void init_logpoint(stackdriver_debugger_logpoint_t *logpoint)
