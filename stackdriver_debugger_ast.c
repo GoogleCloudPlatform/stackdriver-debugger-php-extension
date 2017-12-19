@@ -291,20 +291,45 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
 /**
  * Determine if the allowed function call is whitelisted.
  */
-static int valid_debugger_call(zend_ast *ast)
+static int valid_debugger_call(zend_string *function_name)
 {
-    zend_string *function_name = zend_ast_get_str(ast);
-    zval *zv;
-    if (function_name) {
-        if (zend_hash_find(&global_whitelisted_functions, function_name) != NULL) {
-            return SUCCESS;
-        }
-
-        if (STACKDRIVER_DEBUGGER_G(user_whitelisted_functions) &&
-            zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_name) != NULL) {
-            return SUCCESS;
-        }
+    if (zend_hash_find(&global_whitelisted_functions, function_name) != NULL) {
+        return SUCCESS;
     }
+
+    if (STACKDRIVER_DEBUGGER_G(user_whitelisted_functions) &&
+        zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_name) != NULL) {
+        return SUCCESS;
+    }
+
+    return FAILURE;
+}
+
+static int valid_debugger_call_ast(zend_ast *ast)
+{
+    zend_string *function_name = zend_ast_get_str(ast->child[0]);
+    if (function_name) {
+        return valid_debugger_call(function_name);
+    }
+    return FAILURE;
+}
+
+static int valid_debugger_method_call_ast(zend_ast *ast)
+{
+    zend_string *class_name = zend_ast_get_str(ast->child[0]);
+    zend_string *function_name = zend_ast_get_str(ast->child[1]);
+    int len = class_name->len + function_name->len + 2;
+    zend_string *result = zend_string_alloc(len, 0);
+
+    strcpy(ZSTR_VAL(result), class_name->val);
+    strcat(ZSTR_VAL(result), "::");
+    strcat(ZSTR_VAL(result), function_name->val);
+
+    if (valid_debugger_call(result) == SUCCESS) {
+        zend_string_release(result);
+        return SUCCESS;
+    }
+    zend_string_release(result);
     return FAILURE;
 }
 
@@ -336,8 +361,14 @@ static int valid_debugger_ast(zend_ast *ast)
     } else {
         switch (ast->kind) {
             case ZEND_AST_CALL:
-                if (valid_debugger_call(ast->child[0]) == SUCCESS &&
+                if (valid_debugger_call_ast(ast) == SUCCESS &&
                     valid_debugger_ast(ast->child[1]) == SUCCESS) {
+                    return SUCCESS;
+                }
+                return FAILURE;
+            case ZEND_AST_STATIC_CALL:
+                if (valid_debugger_method_call_ast(ast) == SUCCESS &&
+                    valid_debugger_ast(ast->child[2]) == SUCCESS) {
                     return SUCCESS;
                 }
                 return FAILURE;
