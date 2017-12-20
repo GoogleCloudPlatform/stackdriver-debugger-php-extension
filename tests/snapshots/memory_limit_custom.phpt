@@ -1,5 +1,7 @@
 --TEST--
-Stackdriver Debugger: Snapshots should not spend more than 10MB
+Stackdriver Debugger: Snapshots should not spend more than X MB
+--INI--
+stackdriver_debugger.max_memory=1
 --FILE--
 <?php
 
@@ -9,7 +11,7 @@ function handle_snapshot($breakpoint)
 {
     global $data;
     echo "Breakpoint hit!" . PHP_EOL;
-    $data[] = array_fill(0, 1000000, "abcdefghij"); // 10MB per execution
+    $data[] = array_fill(0, 100000, "abcdefghij"); // 1MB per execution
 }
 
 // set a snapshot for line 7 in loop.php ($sum += $i)
