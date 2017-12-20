@@ -36,5 +36,5 @@ RUN phpize && \
     ./configure --enable-stackdriver-debugger && \
     make clean && \
     make && \
-    make test && \
+    make test || ((find . -name '*.diff' | xargs cat) && false) && \
     make install

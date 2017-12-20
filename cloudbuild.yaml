@@ -2,41 +2,31 @@
 steps:
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=php:7.1', '.']
-    waitFor: ['-']
     id: php71-nts
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=php:7.1-zts', '.']
-    waitFor: ['-']
     id: php71-zts
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=php:7.0', '.']
-    waitFor: ['-']
     id: php70-nts
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=php:7.0-zts', '.']
-    waitFor: ['-']
     id: php70-zts
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=php:7.2-rc', '.']
-    waitFor: ['-']
     id: php72-nts
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=php:7.2-rc-zts', '.']
-    waitFor: ['-']
     id: php72-zts
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php72', '.']
-    waitFor: ['-']
     id: php72-gae
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php71', '.']
-    waitFor: ['-']
     id: php71-gae
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php70', '.']
-    waitFor: ['-']
     id: php70-gae
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php71-debug', '.']
-    waitFor: ['-']
     id: php71-debug
