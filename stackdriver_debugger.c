@@ -226,11 +226,7 @@ PHP_FUNCTION(stackdriver_debugger_snapshot)
     start = stackdriver_debugger_now();
     snapshot = zend_hash_find_ptr(STACKDRIVER_DEBUGGER_G(snapshots_by_id), snapshot_id);
 
-    if (snapshot->fulfilled) {
-        RETURN_FALSE;
-    }
-
-    if (snapshot == NULL || test_conditional(snapshot->condition) != SUCCESS) {
+    if (snapshot == NULL || snapshot->fulfilled || test_conditional(snapshot->condition) != SUCCESS) {
         STACKDRIVER_DEBUGGER_G(time_spent) = STACKDRIVER_DEBUGGER_G(time_spent) + stackdriver_debugger_now() - start;
         RETURN_FALSE;
     }
