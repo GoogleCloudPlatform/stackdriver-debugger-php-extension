@@ -16,3 +16,9 @@ releases:
     version: 0.1.0
     stability: alpha
     notes: First alpha release
+
+  - date: '2018-01-09'
+    time: 09:48:00
+    version: 0.1.1
+    stability: alpha
+    notes: Fix missing snapshot w/ OPCache (#30)
