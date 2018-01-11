@@ -17,11 +17,11 @@
   <email>chingor@google.com</email>
   <active>yes</active>
  </lead>
- <date>2018-01-02</date>
- <time>10:49:00</time>
+ <date>2018-01-09</date>
+ <time>09:48:00</time>
  <version>
-  <release>0.1.0</release>
-  <api>0.1.0</api>
+  <release>0.1.1</release>
+  <api>0.1.1</api>
  </version>
  <stability>
   <release>alpha</release>
@@ -29,7 +29,7 @@
  </stability>
  <license>Apache 2.0</license>
  <notes>
-First alpha release
+Fix missing snapshot w/ OPCache (#30)
  </notes>
  <contents>
   <dir baseinstalldir="/" name="/">
@@ -77,6 +77,7 @@ First alpha release
     <file name="logpoints/log_condition.phpt" role="test" />
     <file name="logpoints/log_multiple_times.phpt" role="test" />
     <file name="logpoints/missing_expressions.phpt" role="test" />
+    <file name="logpoints/missing_logpoint_id.phpt" role="test" />
     <file name="logpoints/multiple_logpoints.phpt" role="test" />
     <file name="logpoints/multiple_logpoints_callback.phpt" role="test" />
     <file name="logpoints/repeated_expressions.phpt" role="test" />
@@ -95,6 +96,7 @@ First alpha release
     <file name="snapshots/expressions_warning.phpt" role="test" />
     <file name="snapshots/first_line_test.phpt" role="test" />
     <file name="snapshots/invalid_condition.phpt" role="test" />
+    <file name="snapshots/missing_snapshot_id.phpt" role="test" />
     <file name="snapshots/multiple_snapshots.phpt" role="test" />
     <file name="snapshots/multiple_snapshots_callback.phpt" role="test" />
     <file name="snapshots/null_snapshot_id.phpt" role="test" />
@@ -162,6 +164,21 @@ Fix windows build configuration
    <license>Apache 2.0</license>
    <notes>
 First alpha release
+   </notes>
+  </release>
+  <release>
+   <version>
+    <release>0.1.1</release>
+    <api>0.1.1</api>
+   </version>
+   <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+   </stability>
+   <date>2018-01-09</date>
+   <license>Apache 2.0</license>
+   <notes>
+Fix missing snapshot w/ OPCache (#30)
    </notes>
   </release>
  </changelog>
