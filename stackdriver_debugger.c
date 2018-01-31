@@ -93,12 +93,14 @@ zend_module_entry stackdriver_debugger_module_entry = {
 ZEND_GET_MODULE(stackdriver_debugger)
 
 PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time);
+PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time_percentage);
 PHP_INI_MH(OnUpdate_stackdriver_debugger_max_memory);
 
 /* Registers php.ini directives */
 PHP_INI_BEGIN()
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS, NULL, PHP_INI_ALL, OnUpdate_stackdriver_debugger_whitelisted_functions)
-    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME, "10", PHP_INI_ALL, OnUpdate_stackdriver_debugger_max_time)
+    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME, "10", PHP_INI_ALL, NULL)
+    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE, "1", PHP_INI_ALL, NULL)
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_MEMORY, "10", PHP_INI_ALL, OnUpdate_stackdriver_debugger_max_memory)
 PHP_INI_END()
 
@@ -116,6 +118,21 @@ PHP_FUNCTION(stackdriver_debugger_version)
 static void php_stackdriver_debugger_globals_ctor(void *pDest TSRMLS_DC)
 {
     zend_stackdriver_debugger_globals *stackdriver_debugger_global = (zend_stackdriver_debugger_globals *) pDest;
+}
+
+static double stackdriver_debugger_total_time_spent;
+static int stackdriver_debugger_total_requests_handled;
+
+static double stackdriver_debugger_max_time()
+{
+    double percentage, max_time = INI_FLT(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME) * 0.001;
+    if (stackdriver_debugger_total_requests_handled > 0) {
+        percentage = 0.01 * INI_FLT(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE) * stackdriver_debugger_total_time_spent / stackdriver_debugger_total_requests_handled;
+        if (percentage < max_time) {
+            return percentage;
+        }
+    }
+    return max_time;
 }
 
 /**
@@ -219,7 +236,7 @@ PHP_FUNCTION(stackdriver_debugger_snapshot)
     size_t start_memory = 0, end_memory;
 
     // if we've already spent more than the time allowed, skip further breakpoints
-    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > stackdriver_debugger_max_time()) {
         RETURN_FALSE;
     }
 
@@ -265,7 +282,7 @@ PHP_FUNCTION(stackdriver_debugger_logpoint)
     size_t start_memory = 0, end_memory;
 
     // if we've already spent more than the time allowed, skip further breakpoints
-    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > stackdriver_debugger_max_time()) {
         RETURN_FALSE;
     }
 
@@ -473,6 +490,9 @@ PHP_MINIT_FUNCTION(stackdriver_debugger)
 
     stackdriver_debugger_ast_minit(INIT_FUNC_ARGS_PASSTHRU);
 
+    stackdriver_debugger_total_time_spent = 0.0;
+    stackdriver_debugger_total_requests_handled = 0;
+
     return SUCCESS;
 }
 /* }}} */
@@ -491,6 +511,8 @@ PHP_MSHUTDOWN_FUNCTION(stackdriver_debugger)
 PHP_RINIT_FUNCTION(stackdriver_debugger)
 {
     STACKDRIVER_DEBUGGER_G(time_spent) = 0;
+
+    STACKDRIVER_DEBUGGER_G(request_start) = stackdriver_debugger_now();
     STACKDRIVER_DEBUGGER_G(memory_used) = 0;
 
     stackdriver_debugger_ast_rinit(TSRMLS_C);
@@ -508,20 +530,13 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
     stackdriver_debugger_snapshot_rshutdown(TSRMLS_C);
     stackdriver_debugger_logpoint_rshutdown(TSRMLS_C);
 
+    stackdriver_debugger_total_time_spent += stackdriver_debugger_now() - STACKDRIVER_DEBUGGER_G(request_start) - STACKDRIVER_DEBUGGER_G(time_spent);
+    stackdriver_debugger_total_requests_handled++;
+
     return SUCCESS;
 }
 /* }}} */
 
-/**
- * Callback for when the user changes the max_time php.ini setting.
- */
-PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time)
-{
-    if (new_value != NULL) {
-        STACKDRIVER_DEBUGGER_G(max_time) = 0.001 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0);
-    }
-    return SUCCESS;
-}
 
 /**
  * Callback for when the user changes the max memory php.ini setting.
