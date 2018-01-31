@@ -8,7 +8,7 @@ $data = [];
 function logpoint_callback($level, $message) {
     global $data;
     echo "logpoint: $level - $message" . PHP_EOL;
-    $data[] = array_fill(0, 1000000, "ab"); // 2MB per execution
+    $data[] = array_fill(0, 100000, 1);
 }
 // set a snapshot for line 7 in loop.php ($sum += $i)
 var_dump(stackdriver_debugger_add_logpoint('loop.php', 7, 'INFO', 'Logpoint hit!', [
@@ -23,8 +23,6 @@ echo "Sum is {$sum}\n";
 ?>
 --EXPECTF--
 bool(true)
-logpoint: INFO - Logpoint hit!
-logpoint: INFO - Logpoint hit!
 logpoint: INFO - Logpoint hit!
 logpoint: INFO - Logpoint hit!
 logpoint: INFO - Logpoint hit!
