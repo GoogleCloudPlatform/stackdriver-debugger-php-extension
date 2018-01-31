@@ -63,6 +63,7 @@ static zend_function_entry stackdriver_debugger_functions[] = {
     PHP_FE(stackdriver_debugger_add_logpoint, arginfo_stackdriver_debugger_add_logpoint)
     PHP_FE(stackdriver_debugger_list_logpoints, NULL)
     PHP_FE(stackdriver_debugger_valid_statement, arginfo_stackdriver_debugger_valid_statement)
+    PHP_FE(stackdriver_debugger_usage, NULL)
     PHP_FE_END
 };
 
@@ -114,6 +115,9 @@ static void php_stackdriver_debugger_globals_ctor(void *pDest TSRMLS_DC)
 {
     zend_stackdriver_debugger_globals *stackdriver_debugger_global = (zend_stackdriver_debugger_globals *) pDest;
 }
+
+static double stackdriver_debugger_total_time_spent;
+static int stackdriver_debugger_total_requests_handled;
 
 /**
  * Return the collected list of debugger snapshots that have been collected for
@@ -359,6 +363,28 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
     RETURN_TRUE;
 }
 
+static void update_max_time(double ini_value)
+{
+    double one_percent;
+    if (stackdriver_debugger_total_requests_handled > 0) {
+        one_percent = 0.01 * stackdriver_debugger_total_time_spent / stackdriver_debugger_total_requests_handled;
+        if (one_percent < ini_value) {
+            STACKDRIVER_DEBUGGER_G(max_time) = one_percent;
+        } else {
+            STACKDRIVER_DEBUGGER_G(max_time) = ini_value;
+        }
+    } else {
+        STACKDRIVER_DEBUGGER_G(max_time) = ini_value;
+    }
+}
+
+PHP_FUNCTION(stackdriver_debugger_usage)
+{
+    array_init(return_value);
+    add_next_index_double(return_value, stackdriver_debugger_total_time_spent);
+    add_next_index_long(return_value, stackdriver_debugger_total_requests_handled);
+}
+
 /**
  * Register a logpoint for recording.
  *
@@ -448,6 +474,9 @@ PHP_MINIT_FUNCTION(stackdriver_debugger)
 
     stackdriver_debugger_ast_minit(INIT_FUNC_ARGS_PASSTHRU);
 
+    stackdriver_debugger_total_time_spent = 0.0;
+    stackdriver_debugger_total_requests_handled = 0;
+
     return SUCCESS;
 }
 /* }}} */
@@ -466,6 +495,7 @@ PHP_MSHUTDOWN_FUNCTION(stackdriver_debugger)
 PHP_RINIT_FUNCTION(stackdriver_debugger)
 {
     STACKDRIVER_DEBUGGER_G(time_spent) = 0;
+    STACKDRIVER_DEBUGGER_G(request_start) = stackdriver_debugger_now();
 
     stackdriver_debugger_ast_rinit(TSRMLS_C);
     stackdriver_debugger_snapshot_rinit(TSRMLS_C);
@@ -482,6 +512,9 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
     stackdriver_debugger_snapshot_rshutdown(TSRMLS_C);
     stackdriver_debugger_logpoint_rshutdown(TSRMLS_C);
 
+    stackdriver_debugger_total_time_spent += stackdriver_debugger_now() - STACKDRIVER_DEBUGGER_G(request_start);
+    stackdriver_debugger_total_requests_handled++;
+
     return SUCCESS;
 }
 /* }}} */
@@ -492,7 +525,7 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
 PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time)
 {
     if (new_value != NULL) {
-        STACKDRIVER_DEBUGGER_G(max_time) = 0.001 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0);
+        update_max_time(0.001 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0));
     }
     return SUCCESS;
 }

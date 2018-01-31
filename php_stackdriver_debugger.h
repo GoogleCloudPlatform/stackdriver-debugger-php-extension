@@ -66,6 +66,7 @@ ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
 
     double time_spent;
     double max_time;
+    double request_start;
 
 ZEND_END_MODULE_GLOBALS(stackdriver_debugger)
 
