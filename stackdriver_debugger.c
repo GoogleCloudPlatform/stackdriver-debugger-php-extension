@@ -529,7 +529,8 @@ PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time)
 PHP_INI_MH(OnUpdate_stackdriver_debugger_max_memory)
 {
     if (new_value != NULL) {
-        STACKDRIVER_DEBUGGER_G(max_memory) = 1000000 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0);
+        /* 1MB = 1024 * 1024 bytes = 1048576 bytes */
+        STACKDRIVER_DEBUGGER_G(max_memory) = 1048576 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0);
     }
     return SUCCESS;
 }
