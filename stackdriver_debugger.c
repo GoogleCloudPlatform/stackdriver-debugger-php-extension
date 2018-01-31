@@ -63,7 +63,6 @@ static zend_function_entry stackdriver_debugger_functions[] = {
     PHP_FE(stackdriver_debugger_add_logpoint, arginfo_stackdriver_debugger_add_logpoint)
     PHP_FE(stackdriver_debugger_list_logpoints, NULL)
     PHP_FE(stackdriver_debugger_valid_statement, arginfo_stackdriver_debugger_valid_statement)
-    PHP_FE(stackdriver_debugger_usage, NULL)
     PHP_FE_END
 };
 
@@ -375,14 +374,6 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
     zend_string_release(full_filename);
 
     RETURN_TRUE;
-}
-
-PHP_FUNCTION(stackdriver_debugger_usage)
-{
-    array_init(return_value);
-    add_next_index_double(return_value, stackdriver_debugger_total_time_spent);
-    add_next_index_long(return_value, stackdriver_debugger_total_requests_handled);
-    add_next_index_double(return_value, stackdriver_debugger_max_time());
 }
 
 /**
