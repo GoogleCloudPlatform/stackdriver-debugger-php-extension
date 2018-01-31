@@ -512,7 +512,7 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
     stackdriver_debugger_snapshot_rshutdown(TSRMLS_C);
     stackdriver_debugger_logpoint_rshutdown(TSRMLS_C);
 
-    stackdriver_debugger_total_time_spent += stackdriver_debugger_now() - STACKDRIVER_DEBUGGER_G(request_start);
+    stackdriver_debugger_total_time_spent += stackdriver_debugger_now() - STACKDRIVER_DEBUGGER_G(request_start) - STACKDRIVER_DEBUGGER_G(time_spent);
     stackdriver_debugger_total_requests_handled++;
 
     return SUCCESS;
