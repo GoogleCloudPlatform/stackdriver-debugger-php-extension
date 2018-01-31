@@ -28,6 +28,7 @@
 #define PHP_STACKDRIVER_DEBUGGER_EXTNAME "stackdriver_debugger"
 #define PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS "stackdriver_debugger.function_whitelist"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME "stackdriver_debugger.max_time"
+#define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE "stackdriver_debugger.max_time_percentage"
 
 PHP_FUNCTION(stackdriver_debugger_version);
 
@@ -65,7 +66,6 @@ ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
     HashTable *ast_to_clean;
 
     double time_spent;
-    double max_time;
     double request_start;
 
 ZEND_END_MODULE_GLOBALS(stackdriver_debugger)

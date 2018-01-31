@@ -93,11 +93,13 @@ zend_module_entry stackdriver_debugger_module_entry = {
 ZEND_GET_MODULE(stackdriver_debugger)
 
 PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time);
+PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time_percentage);
 
 /* Registers php.ini directives */
 PHP_INI_BEGIN()
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS, NULL, PHP_INI_ALL, OnUpdate_stackdriver_debugger_whitelisted_functions)
-    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME, "10", PHP_INI_ALL, OnUpdate_stackdriver_debugger_max_time)
+    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME, "10", PHP_INI_ALL, NULL)
+    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE, "1", PHP_INI_ALL, NULL)
 PHP_INI_END()
 
 /**
@@ -118,6 +120,18 @@ static void php_stackdriver_debugger_globals_ctor(void *pDest TSRMLS_DC)
 
 static double stackdriver_debugger_total_time_spent;
 static int stackdriver_debugger_total_requests_handled;
+
+static double stackdriver_debugger_max_time()
+{
+    double percentage, max_time = INI_FLT(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME) * 0.001;
+    if (stackdriver_debugger_total_requests_handled > 0) {
+        percentage = 0.01 * INI_FLT(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE) * stackdriver_debugger_total_time_spent / stackdriver_debugger_total_requests_handled;
+        if (percentage < max_time) {
+            return percentage;
+        }
+    }
+    return max_time;
+}
 
 /**
  * Return the collected list of debugger snapshots that have been collected for
@@ -219,7 +233,7 @@ PHP_FUNCTION(stackdriver_debugger_snapshot)
     double start = 0;
 
     // if we've already spent more than the time allowed, skip further breakpoints
-    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > stackdriver_debugger_max_time()) {
         RETURN_FALSE;
     }
 
@@ -254,7 +268,7 @@ PHP_FUNCTION(stackdriver_debugger_logpoint)
     double start = 0;
 
     // if we've already spent more than the time allowed, skip further breakpoints
-    if (STACKDRIVER_DEBUGGER_G(time_spent) > STACKDRIVER_DEBUGGER_G(max_time)) {
+    if (STACKDRIVER_DEBUGGER_G(time_spent) > stackdriver_debugger_max_time()) {
         RETURN_FALSE;
     }
 
@@ -363,26 +377,12 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
     RETURN_TRUE;
 }
 
-static void update_max_time(double ini_value)
-{
-    double one_percent;
-    if (stackdriver_debugger_total_requests_handled > 0) {
-        one_percent = 0.01 * stackdriver_debugger_total_time_spent / stackdriver_debugger_total_requests_handled;
-        if (one_percent < ini_value) {
-            STACKDRIVER_DEBUGGER_G(max_time) = one_percent;
-        } else {
-            STACKDRIVER_DEBUGGER_G(max_time) = ini_value;
-        }
-    } else {
-        STACKDRIVER_DEBUGGER_G(max_time) = ini_value;
-    }
-}
-
 PHP_FUNCTION(stackdriver_debugger_usage)
 {
     array_init(return_value);
     add_next_index_double(return_value, stackdriver_debugger_total_time_spent);
     add_next_index_long(return_value, stackdriver_debugger_total_requests_handled);
+    add_next_index_double(return_value, stackdriver_debugger_max_time());
 }
 
 /**
@@ -518,14 +518,3 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger)
     return SUCCESS;
 }
 /* }}} */
-
-/**
- * Callback for when the user changes the max_time php.ini setting.
- */
-PHP_INI_MH(OnUpdate_stackdriver_debugger_max_time)
-{
-    if (new_value != NULL) {
-        update_max_time(0.001 * ZEND_STRTOL(ZSTR_VAL(new_value), NULL, 0));
-    }
-    return SUCCESS;
-}
