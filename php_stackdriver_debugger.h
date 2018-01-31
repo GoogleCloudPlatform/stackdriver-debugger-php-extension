@@ -29,6 +29,7 @@
 #define PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS "stackdriver_debugger.function_whitelist"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME "stackdriver_debugger.max_time"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE "stackdriver_debugger.max_time_percentage"
+#define PHP_STACKDRIVER_DEBUGGER_INI_MAX_MEMORY "stackdriver_debugger.max_memory"
 
 PHP_FUNCTION(stackdriver_debugger_version);
 
@@ -67,7 +68,8 @@ ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
 
     double time_spent;
     double request_start;
-
+    size_t memory_used;
+    size_t max_memory;
 ZEND_END_MODULE_GLOBALS(stackdriver_debugger)
 
 extern ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
