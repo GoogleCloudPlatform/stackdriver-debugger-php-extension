@@ -13,56 +13,18 @@ order to send collected data to a backend storage server.
 
 This extension has been built and tested on the following PHP versions:
 
-* 7.2.0 RC3
+* 7.2.x (ZTS and non-ZTS)
 * 7.1.x (ZTS and non-ZTS)
 * 7.0.x (ZTS and non-ZTS)
 
 ## Installation
 
-### Build from source
+### Download from PECL
 
-1. [Download a release](https://github.com/GoogleCloudPlatform/stackdriver-debugger-php-extension/releases)
-
-   ```bash
-   curl https://github.com/GoogleCloudPlatform/stackdriver-debugger-php-extension/archive/v0.1.0.tar.gz -o debugger.tar.gz
-   ```
-
-1. Untar the package
-
-   ```bash
-   tar -zxvf debugger.tar.gz
-   ```
-
-1. Go to the extension directory
-
-   ```bash
-   cd stackdriver-debugger-php-extension-0.1.0/ext
-   ```
-
-1. Compile the extension
-
-   ```bash
-   phpize
-   configure --enable-stackdriver-debugger
-   make
-   make test
-   make install
-   ```
-
-1. Enable the stackdriver debugger extension. Add the following to your
-   `php.ini` configuration file.
-
-   ```
-   extension=stackdriver_debugger.so
-   ```
-
-### Download from PECL (not yet available)
-
-When this extension is available on PECL, you will be able to download and
-install it easily using the `pecl` CLI tool:
+Install the extension using the `pecl` CLI tool:
 
 ```bash
-pecl install stackdriver_debugger
+pecl install stackdriver_debugger-alpha
 ```
 
 ## Usage
