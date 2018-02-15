@@ -165,7 +165,7 @@ static zend_bool stackdriver_debugger_opcache_enabled()
 static void stackdriver_debugger_opcache_invalidate(zval *return_value, zend_string *filename)
 {
     zval params[2], function_name;
-    if (stackdriver_debugger_opcache_enabled()) {
+    if (STACKDRIVER_DEBUGGER_G(opcache_enabled)) {
         ZVAL_STRING(&function_name, "opcache_invalidate");
         ZVAL_STR(&params[0], filename);
         ZVAL_BOOL(&params[1], 1);
@@ -187,8 +187,7 @@ PHP_FUNCTION(stackdriver_debugger_opcache_invalidate)
 
 PHP_FUNCTION(stackdriver_debugger_opcache_enabled)
 {
-    zend_bool enabled = stackdriver_debugger_opcache_enabled();
-    RETURN_BOOL(enabled);
+    RETURN_BOOL(STACKDRIVER_DEBUGGER_G(opcache_enabled));
 }
 
 /**
@@ -574,6 +573,8 @@ PHP_RINIT_FUNCTION(stackdriver_debugger)
     stackdriver_debugger_ast_rinit(TSRMLS_C);
     stackdriver_debugger_snapshot_rinit(TSRMLS_C);
     stackdriver_debugger_logpoint_rinit(TSRMLS_C);
+
+    STACKDRIVER_DEBUGGER_G(opcache_enabled) = stackdriver_debugger_opcache_enabled();
 
     return SUCCESS;
 }

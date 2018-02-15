@@ -29,6 +29,9 @@ static void (*original_zend_ast_process)(zend_ast*);
 /* map of function name -> empty null zval */
 static HashTable global_whitelisted_functions;
 
+/* map of filename -> (map of breakpoint id -> nil) */
+static HashTable registered_breakpoints;
+
 /**
  * This method generates a new abstract syntax tree that injects a function
  * call to `stackdriver_debugger()`.
@@ -204,6 +207,26 @@ static int inject_ast(zend_ast *ast, zend_ast_list *to_insert)
     return FAILURE;
 }
 
+static void reset_registered_breakpoints_for_filename(zend_string *filename)
+{
+    // php_printf("reseting breakpoints for file: %s\n", ZSTR_VAL(filename));
+    HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
+    if (breakpoints != NULL) {
+        zend_hash_destroy(breakpoints);
+        FREE_HASHTABLE(breakpoints);
+    }
+    ALLOC_HASHTABLE(breakpoints);
+    zend_hash_init(breakpoints, 16, NULL, NULL, 1);
+    zend_hash_update_ptr(&registered_breakpoints, filename, breakpoints);
+}
+
+static void register_breakpoint_id(zend_string *filename, zend_string *id)
+{
+    zend_string *id2 = zend_string_copy(id);
+    HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
+    zend_hash_add_empty_element(breakpoints, id2);
+}
+
 /**
  * This function replaces the original `zend_ast_process` function. If one was
  * previously provided, call that one after this one.
@@ -214,8 +237,15 @@ void stackdriver_debugger_ast_process(zend_ast *ast)
     stackdriver_debugger_snapshot_t *snapshot;
     stackdriver_debugger_logpoint_t *logpoint;
     zend_ast_list *to_insert;
+    zend_string *filename = zend_get_compiled_filename();
 
-    zval *snapshots = zend_hash_find(STACKDRIVER_DEBUGGER_G(snapshots_by_file), zend_get_compiled_filename());
+    zval *snapshots = zend_hash_find(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
+    zval *logpoints = zend_hash_find(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename);
+
+    if (snapshots != NULL || logpoints != NULL) {
+        reset_registered_breakpoints_for_filename(filename);
+    }
+
     if (snapshots != NULL) {
         ht = Z_ARR_P(snapshots);
 
@@ -225,11 +255,14 @@ void stackdriver_debugger_ast_process(zend_ast *ast)
                 snapshot->id,
                 snapshot->lineno
             );
-            inject_ast(ast, to_insert);
+            if (inject_ast(ast, to_insert) == SUCCESS) {
+                register_breakpoint_id(filename, snapshot->id);
+            } else {
+                // failed to insert
+            }
         } ZEND_HASH_FOREACH_END();
     }
 
-    zval *logpoints = zend_hash_find(STACKDRIVER_DEBUGGER_G(logpoints_by_file), zend_get_compiled_filename());
     if (logpoints != NULL) {
         ht = Z_ARR_P(logpoints);
 
@@ -239,7 +272,11 @@ void stackdriver_debugger_ast_process(zend_ast *ast)
                 logpoint->id,
                 logpoint->lineno
             );
-            inject_ast(ast, to_insert);
+            if (inject_ast(ast, to_insert) == SUCCESS) {
+                register_breakpoint_id(filename, logpoint->id);
+            } else {
+                // failed to insert
+            }
         } ZEND_HASH_FOREACH_END();
     }
 
@@ -769,6 +806,15 @@ int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
     return SUCCESS;
 }
 
+static void breakpoints_dtor(zval *zv)
+{
+    // php_printf("breakpoints_dtor\n");
+    HashTable *ht = Z_PTR_P(zv);
+    zend_hash_destroy(ht);
+    FREE_HASHTABLE(ht);
+    ZVAL_PTR_DTOR(zv);
+}
+
 /**
  * Module initialization lifecycle hook. Registers our AST processor so we can
  * modify the AST after compilation.
@@ -783,8 +829,12 @@ int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS)
     zend_ast_process = stackdriver_debugger_ast_process;
 
     /* Setup storage for whitelisted functions */
-    zend_hash_init(&global_whitelisted_functions, 1024, NULL, NULL, 1);
+    zend_hash_init(&global_whitelisted_functions, 1024, NULL, ZVAL_PTR_DTOR, 1);
     register_whitelisted_functions(&global_whitelisted_functions);
+
+    /* Setup storage for breakpoints by filename */
+    zend_hash_init(&registered_breakpoints, 16, NULL, breakpoints_dtor, 1);
+
     return SUCCESS;
 }
 
@@ -795,6 +845,8 @@ int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
 {
     zend_ast_process = original_zend_ast_process;
     zend_hash_destroy(&global_whitelisted_functions);
+
+    zend_hash_destroy(&registered_breakpoints);
 
     return SUCCESS;
 }
