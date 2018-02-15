@@ -29,6 +29,6 @@ PHP_FUNCTION(stackdriver_debugger_list_logpoints);
 PHP_FUNCTION(stackdriver_debugger_valid_statement);
 PHP_FUNCTION(stackdriver_debugger_opcache_enabled);
 PHP_FUNCTION(stackdriver_debugger_opcache_invalidate);
-PHP_FUNCTION(stackdriver_debugger_breakpoint_ids_inserted);
+PHP_FUNCTION(stackdriver_debugger_injected_breakpoints);
 
 #endif
