@@ -207,6 +207,27 @@ static int inject_ast(zend_ast *ast, zend_ast_list *to_insert)
     return FAILURE;
 }
 
+static void fill_breakpoint_ids(zval *array, HashTable *breakpoints)
+{
+    int i;
+    zend_string *breakpoint_id;
+    ZEND_HASH_FOREACH_KEY(breakpoints, i, breakpoint_id) {
+        add_next_index_str(array, breakpoint_id);
+    } ZEND_HASH_FOREACH_END();
+}
+
+void stackdriver_list_breakpoint_ids(zval *return_value)
+{
+    HashTable *breakpoints;
+    zend_string *filename;
+    ZEND_HASH_FOREACH_STR_KEY_PTR(&registered_breakpoints, filename, breakpoints) {
+        zval breakpoint_ids;
+        array_init(&breakpoint_ids);
+        fill_breakpoint_ids(&breakpoint_ids, breakpoints);
+        add_assoc_zval_ex(return_value, ZSTR_VAL(filename), ZSTR_LEN(filename), &breakpoint_ids);
+    } ZEND_HASH_FOREACH_END();
+}
+
 static void reset_registered_breakpoints_for_filename(zend_string *filename)
 {
     // php_printf("reseting breakpoints for file: %s\n", ZSTR_VAL(filename));

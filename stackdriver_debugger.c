@@ -67,6 +67,7 @@ static zend_function_entry stackdriver_debugger_functions[] = {
     PHP_FE(stackdriver_debugger_valid_statement, arginfo_stackdriver_debugger_valid_statement)
     PHP_FE(stackdriver_debugger_opcache_enabled, NULL)
     PHP_FE(stackdriver_debugger_opcache_invalidate, NULL)
+    PHP_FE(stackdriver_debugger_breakpoint_ids_inserted, NULL)
     PHP_FE_END
 };
 
@@ -188,6 +189,12 @@ PHP_FUNCTION(stackdriver_debugger_opcache_invalidate)
 PHP_FUNCTION(stackdriver_debugger_opcache_enabled)
 {
     RETURN_BOOL(STACKDRIVER_DEBUGGER_G(opcache_enabled));
+}
+
+PHP_FUNCTION(stackdriver_debugger_breakpoint_ids_inserted)
+{
+    array_init(return_value);
+    stackdriver_list_breakpoint_ids(return_value);
 }
 
 /**
