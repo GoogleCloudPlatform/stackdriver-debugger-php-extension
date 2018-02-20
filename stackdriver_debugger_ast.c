@@ -230,22 +230,29 @@ void stackdriver_list_breakpoint_ids(zval *return_value)
 
 static void reset_registered_breakpoints_for_filename(zend_string *filename)
 {
-    // php_printf("reseting breakpoints for file: %s\n", ZSTR_VAL(filename));
+    zend_string *filename2;
     HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
     if (breakpoints != NULL) {
-        zend_hash_destroy(breakpoints);
-        FREE_HASHTABLE(breakpoints);
+        zend_hash_clean(breakpoints);
+    } else {
+        /**
+         * Persistent string dup as the filename is request based and we need
+         * it to live between requests.
+         */
+        filename2 = zend_string_dup(filename, 1);
+
+        /* Use malloc directly because we are not handling a request */
+        breakpoints = malloc(sizeof(HashTable));
+        zend_hash_init(breakpoints, 16, NULL, NULL, 1);
+        zend_hash_add_ptr(&registered_breakpoints, filename2, breakpoints);
+        zend_string_release(filename2);
     }
-    ALLOC_HASHTABLE(breakpoints);
-    zend_hash_init(breakpoints, 16, NULL, NULL, 1);
-    zend_hash_update_ptr(&registered_breakpoints, filename, breakpoints);
 }
 
 static void register_breakpoint_id(zend_string *filename, zend_string *id)
 {
-    zend_string *id2 = zend_string_copy(id);
     HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
-    zend_hash_add_empty_element(breakpoints, id2);
+    zend_hash_add_empty_element(breakpoints, id);
 }
 
 /**
@@ -827,12 +834,20 @@ int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
     return SUCCESS;
 }
 
+/**
+ * Callback for destroying each value stored in registered_breakpoints global.
+ */
 static void breakpoints_dtor(zval *zv)
 {
-    // php_printf("breakpoints_dtor\n");
+    /**
+     * This HashTable is allocated with malloc in
+     * reset_registered_breakpoints_for_filename.
+     */
     HashTable *ht = Z_PTR_P(zv);
     zend_hash_destroy(ht);
-    FREE_HASHTABLE(ht);
+
+    /* use free directly because we are not handling a request */
+    free(ht);
     ZVAL_PTR_DTOR(zv);
 }
 
@@ -854,7 +869,7 @@ int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS)
     register_whitelisted_functions(&global_whitelisted_functions);
 
     /* Setup storage for breakpoints by filename */
-    zend_hash_init(&registered_breakpoints, 16, NULL, breakpoints_dtor, 1);
+    zend_hash_init(&registered_breakpoints, 64, NULL, breakpoints_dtor, 1);
 
     return SUCCESS;
 }
@@ -866,7 +881,6 @@ int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
 {
     zend_ast_process = original_zend_ast_process;
     zend_hash_destroy(&global_whitelisted_functions);
-
     zend_hash_destroy(&registered_breakpoints);
 
     return SUCCESS;
