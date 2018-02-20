@@ -19,12 +19,7 @@
 #include "stackdriver_debugger_ast.h"
 #include "stackdriver_debugger_snapshot.h"
 #include "zend_exceptions.h"
-
-#if PHP_VERSION_ID < 70100
-#include "standard/php_rand.h"
-#else
-#include "standard/php_mt_rand.h"
-#endif
+#include "stackdriver_debugger_random.h"
 
 /* Initialize an empty, allocated variable */
 static void init_variable(stackdriver_debugger_variable_t *variable)
@@ -332,12 +327,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     init_snapshot(snapshot);
 
     if (snapshot_id == NULL) {
-        #if PHP_VERSION_ID < 70100
-            if (!BG(mt_rand_is_seeded)) {
-                php_mt_srand(GENERATE_SEED());
-            }
-        #endif
-        snapshot->id = strpprintf(32, "%d", php_mt_rand());
+        snapshot->id = generate_breakpoint_id();
     } else {
         snapshot->id = zend_string_copy(snapshot_id);
     }
