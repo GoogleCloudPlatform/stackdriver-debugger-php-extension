@@ -55,6 +55,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_valid_statement, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, statement, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_valid_invalidate, 0, 0, 1)
+    ZEND_ARG_TYPE_INFO(0, filename, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 /* List of functions provided by this extension */
 static zend_function_entry stackdriver_debugger_functions[] = {
     PHP_FE(stackdriver_debugger_version, NULL)
@@ -66,7 +70,7 @@ static zend_function_entry stackdriver_debugger_functions[] = {
     PHP_FE(stackdriver_debugger_list_logpoints, NULL)
     PHP_FE(stackdriver_debugger_valid_statement, arginfo_stackdriver_debugger_valid_statement)
     PHP_FE(stackdriver_debugger_opcache_enabled, NULL)
-    PHP_FE(stackdriver_debugger_opcache_invalidate, NULL)
+    PHP_FE(stackdriver_debugger_opcache_invalidate, arginfo_stackdriver_debugger_valid_invalidate)
     PHP_FE(stackdriver_debugger_injected_breakpoints, NULL)
     PHP_FE_END
 };
