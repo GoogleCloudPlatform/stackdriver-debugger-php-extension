@@ -210,12 +210,32 @@ static int inject_ast(zend_ast *ast, zend_ast_list *to_insert)
 static void fill_breakpoint_ids(zval *array, HashTable *breakpoints)
 {
     int i;
-    zend_string *breakpoint_id;
+    zend_string *breakpoint_id, *breakpoint_id2;
     ZEND_HASH_FOREACH_KEY(breakpoints, i, breakpoint_id) {
-        add_next_index_str(array, breakpoint_id);
+        breakpoint_id2 = zend_string_dup(breakpoint_id, 0);
+        add_next_index_str(array, breakpoint_id2);
     } ZEND_HASH_FOREACH_END();
 }
 
+int stackdriver_debugger_breakpoint_injected(zend_string *filename, zend_string *breakpoint_id)
+{
+    HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
+    zval *zv;
+    if (breakpoints == NULL) {
+        return FAILURE;
+    }
+
+    zv = zend_hash_find(breakpoints, breakpoint_id);
+    if (zv == NULL) {
+        return FAILURE;
+    }
+    return SUCCESS;
+}
+
+/**
+ * Fills an initialized PHP array with all of the currently injected breakpoint
+ * ids grouped by the file they are injected into.
+ */
 void stackdriver_list_breakpoint_ids(zval *return_value)
 {
     HashTable *breakpoints;
@@ -245,14 +265,14 @@ static void reset_registered_breakpoints_for_filename(zend_string *filename)
         breakpoints = malloc(sizeof(HashTable));
         zend_hash_init(breakpoints, 16, NULL, NULL, 1);
         zend_hash_add_ptr(&registered_breakpoints, filename2, breakpoints);
-        zend_string_release(filename2);
     }
 }
 
 static void register_breakpoint_id(zend_string *filename, zend_string *id)
 {
+    zend_string *id2 = zend_string_dup(id, 1);
     HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
-    zend_hash_add_empty_element(breakpoints, id);
+    zend_hash_add_empty_element(breakpoints, id2);
 }
 
 /**

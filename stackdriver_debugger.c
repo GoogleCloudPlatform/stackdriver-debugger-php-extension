@@ -163,17 +163,16 @@ static zend_bool stackdriver_debugger_opcache_enabled()
     return invalidate != NULL && enabled;
 }
 
-static void stackdriver_debugger_opcache_invalidate(zval *return_value, zend_string *filename)
+static int stackdriver_debugger_opcache_invalidate(zend_string *filename)
 {
-    zval params[2], function_name;
+    zval params[2], function_name, ret;
     if (STACKDRIVER_DEBUGGER_G(opcache_enabled)) {
         ZVAL_STRING(&function_name, "opcache_invalidate");
         ZVAL_STR(&params[0], filename);
         ZVAL_BOOL(&params[1], 1);
-        call_user_function(EG(function_table), NULL, &function_name, return_value, 2, params);
-    } else {
-        ZVAL_FALSE(return_value);
+        return call_user_function(EG(function_table), NULL, &function_name, &ret, 2, params);
     }
+    return FAILURE;
 }
 
 PHP_FUNCTION(stackdriver_debugger_opcache_invalidate)
@@ -183,7 +182,11 @@ PHP_FUNCTION(stackdriver_debugger_opcache_invalidate)
         RETURN_FALSE;
     }
 
-    stackdriver_debugger_opcache_invalidate(return_value, filename);
+    if (stackdriver_debugger_opcache_invalidate(filename) == SUCCESS) {
+        RETURN_TRUE;
+    } else {
+        RETURN_FALSE;
+    }
 }
 
 PHP_FUNCTION(stackdriver_debugger_opcache_enabled)
@@ -458,6 +461,9 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
         RETURN_FALSE;
     }
 
+    if (stackdriver_debugger_breakpoint_injected(full_filename, snapshot_id) != SUCCESS) {
+        stackdriver_debugger_opcache_invalidate(full_filename);
+    }
     zend_string_release(full_filename);
 
     RETURN_TRUE;
@@ -532,6 +538,9 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
         RETURN_FALSE;
     }
 
+    if (stackdriver_debugger_breakpoint_injected(full_filename, snapshot_id) != SUCCESS) {
+        stackdriver_debugger_opcache_invalidate(full_filename);
+    }
     zend_string_release(full_filename);
 
     RETURN_TRUE;
