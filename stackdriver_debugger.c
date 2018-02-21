@@ -163,6 +163,10 @@ static zend_bool stackdriver_debugger_opcache_enabled()
     return invalidate != NULL && enabled;
 }
 
+/**
+ * Helper function to invoke `opcache_invalidate` from our C functions. Returns
+ * SUCCESS | FAILURE.
+ */
 static int stackdriver_debugger_opcache_invalidate(zend_string *filename)
 {
     zval params[2], function_name, ret;
@@ -175,6 +179,13 @@ static int stackdriver_debugger_opcache_invalidate(zend_string *filename)
     return FAILURE;
 }
 
+/**
+ * Force clear opcache if opcache is detected and enabled. Returns false if
+ * opcache is not enabled or if the cache clearing fails.
+ *
+ * @param string $filename Which file's cache to clear.
+ * @return bool
+ */
 PHP_FUNCTION(stackdriver_debugger_opcache_invalidate)
 {
     zend_string *filename = NULL;
@@ -189,11 +200,23 @@ PHP_FUNCTION(stackdriver_debugger_opcache_invalidate)
     }
 }
 
+/**
+ * Returns the detected state of the whether opcache was enabled for this
+ * request.
+ *
+ * @return bool
+ */
 PHP_FUNCTION(stackdriver_debugger_opcache_enabled)
 {
     RETURN_BOOL(STACKDRIVER_DEBUGGER_G(opcache_enabled));
 }
 
+/**
+ * Returns a list of injected breakpoint ids grouped by filename of the
+ * breakpoint.
+ *
+ * @return array
+ */
 PHP_FUNCTION(stackdriver_debugger_injected_breakpoints)
 {
     array_init(return_value);

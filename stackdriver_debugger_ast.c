@@ -207,6 +207,10 @@ static int inject_ast(zend_ast *ast, zend_ast_list *to_insert)
     return FAILURE;
 }
 
+/**
+ * Helper to fill in initialized PHP array with the ids of the currently
+ * injected breakpoint ids for a given file.
+ */
 static void fill_breakpoint_ids(zval *array, HashTable *breakpoints)
 {
     int i;
@@ -215,21 +219,6 @@ static void fill_breakpoint_ids(zval *array, HashTable *breakpoints)
         breakpoint_id2 = zend_string_dup(breakpoint_id, 0);
         add_next_index_str(array, breakpoint_id2);
     } ZEND_HASH_FOREACH_END();
-}
-
-int stackdriver_debugger_breakpoint_injected(zend_string *filename, zend_string *breakpoint_id)
-{
-    HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
-    zval *zv;
-    if (breakpoints == NULL) {
-        return FAILURE;
-    }
-
-    zv = zend_hash_find(breakpoints, breakpoint_id);
-    if (zv == NULL) {
-        return FAILURE;
-    }
-    return SUCCESS;
 }
 
 /**
@@ -246,6 +235,25 @@ void stackdriver_list_breakpoint_ids(zval *return_value)
         fill_breakpoint_ids(&breakpoint_ids, breakpoints);
         add_assoc_zval_ex(return_value, ZSTR_VAL(filename), ZSTR_LEN(filename), &breakpoint_ids);
     } ZEND_HASH_FOREACH_END();
+}
+
+/**
+ * Returns SUCCESS if the extension has previously injected the specified
+ * breakpoint_id in the specified file.
+ */
+int stackdriver_debugger_breakpoint_injected(zend_string *filename, zend_string *breakpoint_id)
+{
+    HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
+    zval *zv;
+    if (breakpoints == NULL) {
+        return FAILURE;
+    }
+
+    zv = zend_hash_find(breakpoints, breakpoint_id);
+    if (zv == NULL) {
+        return FAILURE;
+    }
+    return SUCCESS;
 }
 
 static void reset_registered_breakpoints_for_filename(zend_string *filename)
