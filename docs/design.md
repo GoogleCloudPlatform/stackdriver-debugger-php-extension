@@ -47,29 +47,29 @@ The PHP implementation of Stackdriver Debugger requires 3 components:
 ## Request Lifecycle
 
 1. As early as possible, we start an Agent instance.
-   a. The agent reads the list of snapshots and logpoints from the breakpoint
-      store.
-   a. The agent registers all snapshots for capture and all logpoints for
-      execution.
-   a. The agent registers a shutdown function to handle reporting collected data.
+   - The agent reads the list of snapshots and logpoints from the breakpoint
+     store.
+   - The agent registers all snapshots for capture and all logpoints for
+     execution.
+   - The agent registers a shutdown function to handle reporting collected data.
 1. When any file is compiled, we check to see if a snapshot or logpoint is |
    present in the file.
-   a. If found, the code is modified to inject a php function call to evaluate
-      the breakpoint. This function has a reference to the breakpoint via its
-      breakpointId. This will be important for interacting with OPcache.
-   a. If not found, we do nothing extra.
+   - If found, the code is modified to inject a php function call to evaluate
+     the breakpoint. This function has a reference to the breakpoint via its
+     breakpointId. This will be important for interacting with OPcache.
+   - If not found, we do nothing extra.
 1. When a breakpoint is "hit" (the breakpoint evaluation function is invoked),
    we look up the breakpoint config (whether capture or logpoint).
-   a. If there is no breakpoint found, this function will be a no-op. (Why might
-      this happen?)
-   a. If the breakpoint has a condition set, we evaluate the condition to see if
-      the result is "truthy". If not "truthy", then we do nothing. See evaluating
-      conditions.
-   a. If the condition is not set, or evaluates to a "truthy" value, we perform
-      the breakpoint behavior.
-      i. For snapshots, we capture local variables at each stackframe. The
-         snapshot is marked as completed so we don't evaluate further.
-      i. For logpoints, we evaluate and store a log message.
+   - If there is no breakpoint found, this function will be a no-op. (Why might
+     this happen?)
+   - If the breakpoint has a condition set, we evaluate the condition to see if
+     the result is "truthy". If not "truthy", then we do nothing. See evaluating
+     conditions.
+   - If the condition is not set, or evaluates to a "truthy" value, we perform
+     the breakpoint behavior.
+     - For snapshots, we capture local variables at each stackframe. The
+       snapshot is marked as completed so we don't evaluate further.
+     - For logpoints, we evaluate and store a log message.
 
 ## PHP Version Support
 
