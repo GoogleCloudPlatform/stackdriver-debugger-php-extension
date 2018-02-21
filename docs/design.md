@@ -21,10 +21,10 @@ The life of a request goes something like this:
 
 1. Determine the .php file to execute and initialize request globals (`$_SERVER`,
    `$_REQUEST`, …)
-1.  Lex/Parse/Compile the file (recursively with dependent files) into a
-   `zend_op_array` struct. This may also utilize a cache mechanism. See Opcache
-   Extension for more info.
-1.  Execute the `zend_op_array` via `zend_execute_ex`. Class and function
+1. Lex/Parse/Compile the file (recursively with dependent files) into a
+   `zend_op_array` struct. This may also utilize a cache mechanism. See
+   [Opcache Extension](#interacting-with-opcache) for more info.
+1. Execute the `zend_op_array` via `zend_execute_ex`. Class and function
    definitions are stored in per request data stores and are neither persisted
    between request nor shared between requests.
 
@@ -63,8 +63,8 @@ The PHP implementation of Stackdriver Debugger requires 3 components:
    - If there is no breakpoint found, this function will be a no-op. (Why might
      this happen?)
    - If the breakpoint has a condition set, we evaluate the condition to see if
-     the result is "truthy". If not "truthy", then we do nothing. See evaluating
-     conditions.
+     the result is "truthy". If not "truthy", then we do nothing. See
+     [evaluating conditions](#executing).
    - If the condition is not set, or evaluates to a "truthy" value, we perform
      the breakpoint behavior.
      - For snapshots, we capture local variables at each stackframe. The
