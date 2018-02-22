@@ -204,6 +204,11 @@ ini_set('stackdriver_debugger.function_whitelist', 'foo,bar,MyClass::function');
 Note that all function names specified here must be declared with their full
 namespace if applicable.
 
+## Design
+
+For more information on the design of this project, see
+[Design Document](docs/design.md).
+
 ## Versioning
 
 You can retrieve the version of this extension at runtime.
