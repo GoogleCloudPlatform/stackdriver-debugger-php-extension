@@ -23,18 +23,24 @@ RUN mkdir -p /build && \
         gcc \
         libc-dev \
         make \
-        autoconf
+        autoconf \
+        wget \
+        git-core \
+        unzip
 
 COPY . /build/
 
 WORKDIR /build
 
 ENV TEST_PHP_ARGS="-q" \
-    REPORT_EXIT_STATUS=1
+    REPORT_EXIT_STATUS=1 \
+    PATH=$PATH:/build
 
 RUN phpize && \
     ./configure --enable-stackdriver-debugger && \
     make clean && \
     make && \
     make test || ((find . -name '*.diff' | xargs cat) && false) && \
-    make install
+    make install && \
+    (composer -V || scripts/install_composer.sh) && \
+    scripts/run_functional_tests.sh
