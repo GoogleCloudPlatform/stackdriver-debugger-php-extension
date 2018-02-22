@@ -60,8 +60,8 @@ The PHP implementation of Stackdriver Debugger requires 3 components:
    - If not found, we do nothing extra.
 1. When a breakpoint is "hit" (the breakpoint evaluation function is invoked),
    we look up the breakpoint config (whether capture or logpoint).
-   - If there is no breakpoint found, this function will be a no-op. (Why might
-     this happen?)
+   - If there is no breakpoint found, this function will be a no-op.
+     [Why might this happen?](#interacting-with-opcache)
    - If the breakpoint has a condition set, we evaluate the condition to see if
      the result is "truthy". If not "truthy", then we do nothing. See
      [evaluating conditions](#executing).
