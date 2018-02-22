@@ -19,8 +19,21 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Google\Cloud\Debugger\BreakpointStorage\FileBreakpointStorage;
+use Psr\Log\AbstractLogger;
+
+/**
+ * Test logger class that dumps the log to the output page for testing.
+ */
+class EchoLogger extends AbstractLogger
+{
+    public function log($level, $message, array $context = array())
+    {
+        printf('[%s] %s %s' . PHP_EOL, $level, $message, json_encode($context));
+    }
+}
 
 $agent = new Google\Cloud\Debugger\Agent([
   'sourceRoot' => realpath('../'),
-  'storage' => new FileBreakpointStorage()
+  'storage' => new FileBreakpointStorage(),
+  'logger' => new EchoLogger()
 ]);

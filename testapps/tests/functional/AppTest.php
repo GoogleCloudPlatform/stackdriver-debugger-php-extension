@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+use Google\Cloud\Debugger\Breakpoint;
 use Google\Cloud\Debugger\BreakpointStorage\FileBreakpointStorage;
 use Google\Cloud\Debugger\DebuggerClient;
 use PHPUnit\Framework\TestCase;
@@ -22,18 +23,99 @@ use Goutte\Client;
 
 class AppTest extends TestCase
 {
+    private static $debuggee;
+    private static $storage;
+
+    private $client;
+
     public static function setupBeforeClass()
     {
         $client = new DebuggerClient();
-        $debuggee = $client->debuggee('debuggeeid');
-        $storage = new FileBreakpointStorage();
-        $storage->save($debuggee, []);
+        self::$debuggee = $client->debuggee('debuggeeid');
+        self::$storage = new FileBreakpointStorage();
+    }
+
+    public function setUp()
+    {
+        // clear any breakpoints
+        $this->clearBreakpoints();
+        $this->client = new Client();
+    }
+
+    public function tearDown()
+    {
+        $this->clearBreakpoints();
     }
 
     public function testHomepage()
     {
-        $client = new Client();
-        $crawler = $client->request('GET', 'http://localhost:9000/');
+        $crawler = $this->fetchPath('/');
         $this->assertEquals('Test App', $crawler->text());
+    }
+
+    public function testReadsBreakpoints()
+    {
+        $this->assertNumBreakpoints(0);
+        $this->addBreakpoint('breakpoint1', 'web/index.php', 34);
+        $this->assertNumBreakpoints(1);
+    }
+
+    public function testAddsLogpoint()
+    {
+        // no logpoints should be set, so no logpoint is found
+        $this->fetchPath('/hello/jeff');
+        $content = $this->client->getResponse()->getContent();
+        $this->assertNotContains('[INFO] LOGPOINT: hello there', $content);
+
+        // add a logpoint
+        $this->addBreakpoint('logpoint1', 'web/index.php', 34, [
+            'action' => Breakpoint::ACTION_LOG,
+            'logMessageFormat' => 'hello there'
+        ]);
+
+        // logpoints should persist until removed
+        for ($i = 0; $i < 5; $i++) {
+            $this->fetchPath('/hello/jeff');
+            $content = $this->client->getResponse()->getContent();
+            $this->assertContains('[INFO] LOGPOINT: hello there', $content);
+        }
+
+        // remote the breakpoint
+        $this->clearBreakpoints();
+
+        // no logpoints should be set any more
+        $this->fetchPath('/hello/jeff');
+        $content = $this->client->getResponse()->getContent();
+        $this->assertNotContains('[INFO] LOGPOINT: hello there', $content);
+    }
+
+    private function fetchPath($path, $method = 'GET')
+    {
+        return $this->client->request($method, 'http://localhost:9000' . $path);
+    }
+
+    private function assertNumBreakpoints($count)
+    {
+        $this->fetchPath('/debuggee');
+        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertEquals($count, $data['numBreakpoints']);
+    }
+
+    private function addBreakpoint($id, $file, $line, $options = [])
+    {
+        list($debuggeeId, $breakpoints) = self::$storage->load();
+        $breakpoints[] = new Breakpoint([
+            'id' => $id,
+            'location' => [
+                'path' => $file,
+                'line' => $line
+            ]
+        ] + $options);
+        self::$storage->save(self::$debuggee, $breakpoints);
+    }
+
+    private function clearBreakpoints()
+    {
+        self::$storage->save(self::$debuggee, []);
     }
 }

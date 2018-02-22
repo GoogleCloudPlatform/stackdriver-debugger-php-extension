@@ -6,10 +6,9 @@ $host = getenv('HOST') ?: 'localhost';
 $port = (int)(getenv('PORT') ?: 9000);
 
 $command = sprintf(
-    'php -S %s:%d -t %s -dauto_prepend_file=prepend.php -dextension=stackdriver_debugger.so >/dev/null 2>&1 & echo $!',
+    'php -S %s:%d -t web -dauto_prepend_file=prepend.php -dextension=stackdriver_debugger.so >/dev/null 2>&1 & echo $!',
     $host,
-    $port,
-    'web'
+    $port
 );
 
 $output = [];
