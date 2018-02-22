@@ -1,0 +1,34 @@
+<?php
+
+require __DIR__ . '/../../vendor/autoload.php';
+
+$host = 'localhost';
+$port = 9000;
+
+$command = sprintf(
+    'php -S %s:%d -t %s -dextension=stackdriver_debugger.so >/dev/null 2>&1 & echo $!',
+    $host,
+    $port,
+    'web'
+);
+
+$output = [];
+exec($command, $output);
+$pid = (int) $output[0];
+
+printf(
+    '%s - Web server started on %s:%d with PID %d',
+    date('r'),
+    $host,
+    $port,
+    $pid
+);
+
+// Give the server time to boot.
+sleep(1);
+
+// Kill the web server when the process ends
+register_shutdown_function(function() use ($pid) {
+    echo sprintf('%s - Killing process with ID %d', date('r'), $pid) . PHP_EOL;
+    exec('kill ' . $pid);
+});
