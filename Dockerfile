@@ -25,7 +25,8 @@ RUN mkdir -p /build && \
         make \
         autoconf \
         curl \
-        git-core
+        git-core \
+        unzip
 
 COPY . /build/
 
