@@ -80,7 +80,7 @@ class AppTest extends TestCase
             $this->assertContains('[INFO] LOGPOINT: hello there', $content);
         }
 
-        // remote the breakpoint
+        // remove the breakpoint
         $this->clearBreakpoints();
 
         // no logpoints should be set any more
