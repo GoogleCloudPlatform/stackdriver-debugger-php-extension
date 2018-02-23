@@ -23,7 +23,10 @@ RUN mkdir -p /build && \
         gcc \
         libc-dev \
         make \
-        autoconf
+        autoconf \
+        curl \
+        git-core \
+        unzip
 
 COPY . /build/
 
@@ -37,4 +40,6 @@ RUN phpize && \
     make clean && \
     make && \
     make test || ((find . -name '*.diff' | xargs cat) && false) && \
-    make install
+    make install && \
+    (composer -V || scripts/install_composer.sh) && \
+    scripts/run_functional_tests.sh

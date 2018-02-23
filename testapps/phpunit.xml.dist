@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="./tests/functional/bootstrap.php" colors="true">
+  <testsuites>
+    <testsuite>
+      <directory>tests/functional</directory>
+    </testsuite>
+  </testsuites>
+  <php>
+    <ini name="memory_limit" value="2048M"/>
+  </php>
+</phpunit>
