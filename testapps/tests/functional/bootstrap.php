@@ -2,12 +2,12 @@
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-$host = getenv('HOST') ?: 'localhost';
-$port = (int)(getenv('PORT') ?: 9000);
+$host = getenv('TESTHOST') ?: 'localhost';
+$port = (int)(getenv('TESTPORT') ?: 9000);
 
 $opcache = getenv('ENABLE_OPCACHE') == '1'
     ? '-dzend_extension=opcache.so -dopcache.enable=1'
-    : '';
+    : '-dopcache.enable=0';
 
 $command = sprintf(
     'php -S %s:%d -t web -dauto_prepend_file=prepend.php -dextension=stackdriver_debugger.so %s >/dev/null 2>&1 & echo $!',
