@@ -24,9 +24,8 @@ RUN mkdir -p /build && \
         libc-dev \
         make \
         autoconf \
-        wget \
-        git-core \
-        unzip
+        curl \
+        git-core
 
 COPY . /build/
 

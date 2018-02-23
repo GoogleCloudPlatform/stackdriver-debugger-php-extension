@@ -91,7 +91,8 @@ class AppTest extends TestCase
 
     private function fetchPath($path, $method = 'GET')
     {
-        return $this->client->request($method, 'http://localhost:9000' . $path);
+        $baseUrl = getenv('TESTURL') ?: 'http://localhost:9000';
+        return $this->client->request($method, $baseUrl . $path);
     }
 
     private function assertNumBreakpoints($count)
