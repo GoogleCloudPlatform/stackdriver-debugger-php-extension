@@ -33,8 +33,7 @@ COPY . /build/
 WORKDIR /build
 
 ENV TEST_PHP_ARGS="-q" \
-    REPORT_EXIT_STATUS=1 \
-    PATH=$PATH:/build
+    REPORT_EXIT_STATUS=1
 
 RUN phpize && \
     ./configure --enable-stackdriver-debugger && \
