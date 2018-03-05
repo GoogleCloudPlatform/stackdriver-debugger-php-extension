@@ -392,7 +392,7 @@ static void capture_execution_state(zend_execute_data *execute_data, stackdriver
     int i = 0;
 
     while (ptr) {
-        if (i < snapshot->max_stack_eval_depth) {
+        if (snapshot->max_stack_eval_depth == 0 || i < snapshot->max_stack_eval_depth) {
             stackframe = execute_data_to_stackframe(ptr, 1);
         } else {
             stackframe = execute_data_to_stackframe(ptr, 0);

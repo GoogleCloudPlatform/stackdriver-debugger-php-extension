@@ -1,9 +1,11 @@
 --TEST--
-Stackdriver Debugger: Snapshot stackframe limit should default to all frames
+Stackdriver Debugger: Snapshot stackframe limit of 0 should capture all frames
 --FILE--
 <?php
 
-var_dump(stackdriver_debugger_add_snapshot('deep.php', 8));
+var_dump(stackdriver_debugger_add_snapshot('deep.php', 8,[
+    'maxDepth' => 0
+]));
 
 require_once(__DIR__ . '/deep.php');
 

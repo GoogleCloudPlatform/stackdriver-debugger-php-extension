@@ -26,8 +26,6 @@
 #include "stackdriver_debugger_time_functions.h"
 #include "zend_alloc.h"
 
-#define DEFAULT_MAX_STACK_EVAL_DEPTH 5
-
 ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_snapshot, 0, 0, 1)
@@ -347,7 +345,7 @@ static zend_string *stackdriver_debugger_full_filename(zend_string *relative_or_
  *      @type callable $callback The callback to execute when the snapshot is
  *            hit.
  *      @type int $maxDepth The maximum number of stackframes whose variables
- *            are captured. **Defaults to** DEFAULT_MAX_STACK_EVAL_DEPTH.
+ *            are captured. If 0, then no limit. **Defaults to** 0.
  * }
  */
 PHP_FUNCTION(stackdriver_debugger_add_snapshot)
@@ -356,7 +354,7 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
     zend_long lineno;
     HashTable *options = NULL, *expressions = NULL;
     zval *zv = NULL, *callback = NULL;
-    zend_long max_stack_eval_depth = DEFAULT_MAX_STACK_EVAL_DEPTH;
+    zend_long max_stack_eval_depth = 0;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sl|h", &filename, &lineno, &options) == FAILURE) {
         RETURN_FALSE;
