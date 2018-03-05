@@ -26,6 +26,8 @@
 #include "stackdriver_debugger_time_functions.h"
 #include "zend_alloc.h"
 
+#define DEFAULT_MAX_STACK_EVAL_DEPTH 5
+
 ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_snapshot, 0, 0, 1)
@@ -340,7 +342,12 @@ static zend_string *stackdriver_debugger_full_filename(zend_string *relative_or_
  *      @type array $expressions An array of additional statements to execute
  *            in the execution context that are captured along with the local
  *            variables in scope.
- *      @type string $currentFile
+ *      @type string $sourceRoot Full path the the root directory of the
+ *            application source code.
+ *      @type callable $callback The callback to execute when the snapshot is
+ *            hit.
+ *      @type int $maxDepth The maximum number of stackframes whose variables
+ *            are captured. **Defaults to** DEFAULT_MAX_STACK_EVAL_DEPTH.
  * }
  */
 PHP_FUNCTION(stackdriver_debugger_add_snapshot)
@@ -349,6 +356,7 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
     zend_long lineno;
     HashTable *options = NULL, *expressions = NULL;
     zval *zv = NULL, *callback = NULL;
+    zend_long max_stack_eval_depth = DEFAULT_MAX_STACK_EVAL_DEPTH;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sl|h", &filename, &lineno, &options) == FAILURE) {
         RETURN_FALSE;
@@ -379,6 +387,11 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
         if (zv != NULL && !Z_ISNULL_P(zv)) {
             callback = zv;
         }
+
+        zv = zend_hash_str_find(options, "maxDepth", strlen("maxDepth"));
+        if (zv != NULL && Z_TYPE_P(zv) == IS_LONG) {
+            max_stack_eval_depth = Z_LVAL_P(zv);
+        }
     }
 
     if (source_root == NULL) {
@@ -391,7 +404,7 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
         full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), ZSTR_LEN(source_root));
     }
 
-    if (register_snapshot(snapshot_id, full_filename, lineno, condition, expressions, callback) != SUCCESS) {
+    if (register_snapshot(snapshot_id, full_filename, lineno, condition, expressions, callback, max_stack_eval_depth) != SUCCESS) {
         zend_string_release(full_filename);
         RETURN_FALSE;
     }

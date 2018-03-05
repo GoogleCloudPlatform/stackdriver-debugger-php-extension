@@ -290,7 +290,7 @@ static void capture_locals(zend_execute_data *execute_data, stackdriver_debugger
 /**
  * Capture the execution state from `execute_data`
  */
-static stackdriver_debugger_stackframe_t *execute_data_to_stackframe(zend_execute_data *execute_data)
+static stackdriver_debugger_stackframe_t *execute_data_to_stackframe(zend_execute_data *execute_data, int capture_variables)
 {
     stackdriver_debugger_stackframe_t *stackframe;
     zend_op_array *op_array;
@@ -312,7 +312,9 @@ static stackdriver_debugger_stackframe_t *execute_data_to_stackframe(zend_execut
     stackframe->filename = zend_string_copy(op_array->filename);
     stackframe->lineno = execute_data->opline->lineno;
 
-    capture_locals(execute_data, stackframe);
+    if (capture_variables == 1) {
+        capture_locals(execute_data, stackframe);
+    }
 
     return stackframe;
 }
@@ -323,7 +325,7 @@ static stackdriver_debugger_stackframe_t *execute_data_to_stackframe(zend_execut
  */
 int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     zend_long lineno, zend_string *condition, HashTable *expressions,
-    zval *callback)
+    zval *callback, zend_long max_stack_eval_depth)
 {
     HashTable *snapshots;
     stackdriver_debugger_snapshot_t *snapshot;
@@ -343,6 +345,7 @@ int register_snapshot(zend_string *snapshot_id, zend_string *filename,
     }
     snapshot->filename = zend_string_copy(filename);
     snapshot->lineno = lineno;
+    snapshot->max_stack_eval_depth = max_stack_eval_depth;
     if (condition != NULL && ZSTR_LEN(condition) > 0) {
         if (valid_debugger_statement(condition) != SUCCESS) {
             destroy_snapshot(snapshot);
@@ -389,9 +392,14 @@ static void capture_execution_state(zend_execute_data *execute_data, stackdriver
     int i = 0;
 
     while (ptr) {
-        stackframe = execute_data_to_stackframe(ptr);
+        if (i < snapshot->max_stack_eval_depth) {
+            stackframe = execute_data_to_stackframe(ptr, 1);
+        } else {
+            stackframe = execute_data_to_stackframe(ptr, 0);
+        }
         if (stackframe != NULL) {
             zend_hash_next_index_insert_ptr(snapshot->stackframes, stackframe);
+            i++;
         }
         ptr = ptr->prev_execute_data;
     }
