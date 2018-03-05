@@ -55,9 +55,6 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_valid_statement, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, statement, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_valid_invalidate, 0, 0, 1)
-    ZEND_ARG_TYPE_INFO(0, filename, IS_STRING, 0)
-ZEND_END_ARG_INFO()
 
 /* List of functions provided by this extension */
 static zend_function_entry stackdriver_debugger_functions[] = {
@@ -69,9 +66,6 @@ static zend_function_entry stackdriver_debugger_functions[] = {
     PHP_FE(stackdriver_debugger_add_logpoint, arginfo_stackdriver_debugger_add_logpoint)
     PHP_FE(stackdriver_debugger_list_logpoints, NULL)
     PHP_FE(stackdriver_debugger_valid_statement, arginfo_stackdriver_debugger_valid_statement)
-    PHP_FE(stackdriver_debugger_opcache_enabled, NULL)
-    PHP_FE(stackdriver_debugger_opcache_invalidate, arginfo_stackdriver_debugger_valid_invalidate)
-    PHP_FE(stackdriver_debugger_injected_breakpoints, NULL)
     PHP_FE_END
 };
 
@@ -181,50 +175,6 @@ static int stackdriver_debugger_opcache_invalidate(zend_string *filename)
         return call_user_function(EG(function_table), NULL, &function_name, &ret, 2, params);
     }
     return FAILURE;
-}
-
-/**
- * Force clear opcache if opcache is detected and enabled. Returns false if
- * opcache is not enabled or if the cache clearing fails.
- *
- * @param string $filename Which file's cache to clear.
- * @return bool
- */
-PHP_FUNCTION(stackdriver_debugger_opcache_invalidate)
-{
-    zend_string *filename = NULL;
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &filename) == FAILURE) {
-        RETURN_FALSE;
-    }
-
-    if (stackdriver_debugger_opcache_invalidate(filename) == SUCCESS) {
-        RETURN_TRUE;
-    } else {
-        RETURN_FALSE;
-    }
-}
-
-/**
- * Returns the detected state of the whether opcache was enabled for this
- * request.
- *
- * @return bool
- */
-PHP_FUNCTION(stackdriver_debugger_opcache_enabled)
-{
-    RETURN_BOOL(STACKDRIVER_DEBUGGER_G(opcache_enabled));
-}
-
-/**
- * Returns a list of injected breakpoint ids grouped by filename of the
- * breakpoint.
- *
- * @return array
- */
-PHP_FUNCTION(stackdriver_debugger_injected_breakpoints)
-{
-    array_init(return_value);
-    stackdriver_list_breakpoint_ids(return_value);
 }
 
 /**
