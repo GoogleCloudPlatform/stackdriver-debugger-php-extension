@@ -15,6 +15,7 @@
  */
 
 #include "php.h"
+#include "main/SAPI.h"
 #include "standard/php_string.h"
 #include "standard/info.h"
 #include "php_stackdriver_debugger.h"
@@ -53,6 +54,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_valid_statement, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, statement, IS_STRING, 0)
 ZEND_END_ARG_INFO()
+
 
 /* List of functions provided by this extension */
 static zend_function_entry stackdriver_debugger_functions[] = {
@@ -123,6 +125,11 @@ static void php_stackdriver_debugger_globals_ctor(void *pDest TSRMLS_DC)
 static double stackdriver_debugger_total_time_spent;
 static int stackdriver_debugger_total_requests_handled;
 
+/**
+ * Returns the max time that should be spent in the debugger in milliseconds.
+ *
+ * @return double
+ */
 static double stackdriver_debugger_max_time()
 {
     double percentage, max_time = INI_FLT(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME) * 0.001;
@@ -133,6 +140,41 @@ static double stackdriver_debugger_max_time()
         }
     }
     return max_time;
+}
+
+/**
+ * Detects if opcache is available and enabled.
+ *
+ * @return zend_bool
+ */
+static zend_bool stackdriver_debugger_opcache_enabled()
+{
+    zend_string *function_name = zend_string_init("opcache_invalidate", sizeof("opcache_invalidate") - 1, 0);
+    zend_function *invalidate = zend_hash_find_ptr(EG(function_table), function_name);
+    zend_bool enabled;
+    zend_string_release(function_name);
+    if (strcmp(sapi_module.name, "cli") == 0) {
+        enabled = INI_BOOL("opcache.enable_cli");
+    } else {
+        enabled = INI_BOOL("opcache.enable");
+    }
+    return invalidate != NULL && enabled;
+}
+
+/**
+ * Helper function to invoke `opcache_invalidate` from our C functions. Returns
+ * SUCCESS | FAILURE.
+ */
+static int stackdriver_debugger_opcache_invalidate(zend_string *filename)
+{
+    zval params[2], function_name, ret;
+    if (STACKDRIVER_DEBUGGER_G(opcache_enabled)) {
+        ZVAL_STRING(&function_name, "opcache_invalidate");
+        ZVAL_STR(&params[0], filename);
+        ZVAL_BOOL(&params[1], 1);
+        return call_user_function(EG(function_table), NULL, &function_name, &ret, 2, params);
+    }
+    return FAILURE;
 }
 
 /**
@@ -396,6 +438,9 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
         RETURN_FALSE;
     }
 
+    if (stackdriver_debugger_breakpoint_injected(full_filename, snapshot_id) != SUCCESS) {
+        stackdriver_debugger_opcache_invalidate(full_filename);
+    }
     zend_string_release(full_filename);
 
     RETURN_TRUE;
@@ -470,6 +515,9 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
         RETURN_FALSE;
     }
 
+    if (stackdriver_debugger_breakpoint_injected(full_filename, snapshot_id) != SUCCESS) {
+        stackdriver_debugger_opcache_invalidate(full_filename);
+    }
     zend_string_release(full_filename);
 
     RETURN_TRUE;
@@ -518,6 +566,8 @@ PHP_RINIT_FUNCTION(stackdriver_debugger)
     stackdriver_debugger_ast_rinit(TSRMLS_C);
     stackdriver_debugger_snapshot_rinit(TSRMLS_C);
     stackdriver_debugger_logpoint_rinit(TSRMLS_C);
+
+    STACKDRIVER_DEBUGGER_G(opcache_enabled) = stackdriver_debugger_opcache_enabled();
 
     return SUCCESS;
 }

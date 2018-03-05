@@ -20,12 +20,7 @@
 #include "stackdriver_debugger_logpoint.h"
 #include "zend_exceptions.h"
 #include "stackdriver_debugger_time_functions.h"
-
-#if PHP_VERSION_ID < 70100
-#include "standard/php_rand.h"
-#else
-#include "standard/php_mt_rand.h"
-#endif
+#include "stackdriver_debugger_random.h"
 
 #include "ext/pcre/php_pcre.h"
 
@@ -200,12 +195,7 @@ int register_logpoint(zend_string *logpoint_id, zend_string *filename,
     init_logpoint(logpoint);
 
     if (logpoint_id == NULL) {
-        #if PHP_VERSION_ID < 70100
-            if (!BG(mt_rand_is_seeded)) {
-                php_mt_srand(GENERATE_SEED());
-            }
-        #endif
-        logpoint->id = strpprintf(20, "%d", php_mt_rand());
+        logpoint->id = generate_breakpoint_id();
     } else {
         logpoint->id = zend_string_copy(logpoint_id);
     }
