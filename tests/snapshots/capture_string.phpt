@@ -1,5 +1,5 @@
 --TEST--
-Stackdriver Debugger: Capturing an array should return a hash id
+Stackdriver Debugger: Capturing a string should return a hash id
 --FILE--
 <?php
 
@@ -7,9 +7,8 @@ var_dump(stackdriver_debugger_add_snapshot('echo.php', 4));
 
 require_once(__DIR__ . '/echo.php');
 
-$input = [1, 2, "foo", "bar", [1, 2]];
+$input = "Hello, World!";
 $output = echoValue($input);
-
 $list = stackdriver_debugger_list_snapshots();
 
 echo "Number of breakpoints: " . count($list) . PHP_EOL;
