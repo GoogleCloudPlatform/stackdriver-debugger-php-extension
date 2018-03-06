@@ -20,6 +20,7 @@
 #include "stackdriver_debugger_snapshot.h"
 #include "zend_exceptions.h"
 #include "stackdriver_debugger_random.h"
+#include "spl/php_spl.h"
 
 /* Initialize an empty, allocated variable */
 static void init_variable(stackdriver_debugger_variable_t *variable)
@@ -132,9 +133,27 @@ static void destroy_snapshot(stackdriver_debugger_snapshot_t *snapshot)
  */
 static void variable_to_zval(zval *return_value, stackdriver_debugger_variable_t *variable)
 {
+    zend_string *hash = NULL;
     array_init(return_value);
     add_assoc_str(return_value, "name", variable->name);
     add_assoc_zval(return_value, "value", &variable->value);
+    switch (Z_TYPE(variable->value)) {
+        case IS_OBJECT:
+            /* Use the spl_object_hash value */
+            hash = php_spl_object_hash(&variable->value);
+            break;
+        case IS_ARRAY:
+            /* Use the memory address of the zend_array */
+            hash = strpprintf(16, "%016zx", Z_ARR(variable->value));
+            break;
+        case IS_STRING:
+            /* Use the internal HashTable value */
+            hash = strpprintf(32, "%016zx", ZSTR_HASH(Z_STR(variable->value)));
+            break;
+    }
+    if (hash != NULL) {
+        add_assoc_str(return_value, "id", hash);
+    }
 }
 
 /* Capture a variable with provided name and zval into a collected variable */
