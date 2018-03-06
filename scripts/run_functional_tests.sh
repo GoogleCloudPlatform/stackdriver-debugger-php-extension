@@ -21,5 +21,6 @@ pushd testapps
 
 composer install
 vendor/bin/phpunit
+ENABLE_OPCACHE=1 vendor/bin/phpunit
 
 popd

@@ -70,6 +70,7 @@ ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
     double request_start;
     size_t memory_used;
     size_t max_memory;
+    zend_bool opcache_enabled;
 ZEND_END_MODULE_GLOBALS(stackdriver_debugger)
 
 extern ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
