@@ -24,7 +24,7 @@
 #include "php.h"
 #include "stackdriver_debugger.h"
 
-#define PHP_STACKDRIVER_DEBUGGER_VERSION "0.1.1"
+#define PHP_STACKDRIVER_DEBUGGER_VERSION "0.2.0"
 #define PHP_STACKDRIVER_DEBUGGER_EXTNAME "stackdriver_debugger"
 #define PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS "stackdriver_debugger.function_whitelist"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME "stackdriver_debugger.max_time"

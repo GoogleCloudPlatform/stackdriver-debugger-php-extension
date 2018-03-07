@@ -22,3 +22,15 @@ releases:
     version: 0.1.1
     stability: alpha
     notes: Fix missing snapshot w/ OPCache (#30)
+
+  - date: '2018-03-07'
+    time: 10:15:00
+    version: 0.2.0
+    stability: alpha
+    notes: |-
+      - Limit memory usage (#28)
+      - Limit time spent in debugger (#33)
+      - Detect and handle OPcache clearing (#35)
+      - Optionally limit stackframe depth for capturing variables (#39)
+      - Provide hash id for deduping arrays and strings (#41)
+      - Fix segfault for OSX (#42)
