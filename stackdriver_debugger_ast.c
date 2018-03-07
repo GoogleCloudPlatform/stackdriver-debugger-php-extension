@@ -350,6 +350,7 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
     zval source_zval;
 
     ZVAL_STR(&source_zval, source);
+    Z_TRY_ADDREF(source_zval);
     zend_save_lexical_state(original_lex_state);
 
     if (zend_prepare_string_for_scanning(&source_zval, "") == FAILURE) {
@@ -527,7 +528,8 @@ static int valid_debugger_ast(zend_ast *ast)
 int valid_debugger_statement(zend_string *statement)
 {
     zend_lex_state original_lex_state;
-    zend_ast *ast_p;
+    zend_ast *ast_p, *old_ast = CG(ast);
+    zend_arena *old_arena = CG(ast_arena);
 
     /*
      * Append ';' to the end for lexing/parsing. Evaluating the statement
@@ -555,8 +557,8 @@ int valid_debugger_statement(zend_string *statement)
     zend_ast_destroy(CG(ast));
     zend_arena_destroy(CG(ast_arena));
     zend_restore_lexical_state(&original_lex_state);
-    CG(ast) = NULL;
-    CG(ast_arena) = NULL;
+    CG(ast) = old_ast;
+    CG(ast_arena) = old_arena;
 
     return SUCCESS;
 }
