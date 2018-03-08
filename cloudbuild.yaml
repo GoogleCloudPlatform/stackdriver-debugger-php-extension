@@ -30,3 +30,9 @@ steps:
   - name: gcr.io/cloud-builders/docker
     args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php71-debug', '.']
     id: php71-debug
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php71-32bit', '.']
+    id: php71-32bit
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php70-32bit', '.']
+    id: php70-32bit
