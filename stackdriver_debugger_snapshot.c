@@ -122,7 +122,7 @@ static void destroy_snapshot(stackdriver_debugger_snapshot_t *snapshot)
     FREE_HASHTABLE(snapshot->stackframes);
 
     if (Z_TYPE(snapshot->callback) != IS_NULL) {
-        ZVAL_DESTRUCTOR(&snapshot->callback);
+        zval_ptr_dtor(&snapshot->callback);
     }
     efree(snapshot);
 }
@@ -440,8 +440,8 @@ static int handle_snapshot_callback(zval *callback, stackdriver_debugger_snapsho
     snapshot_to_zval(&zsnapshot, snapshot);
     int call_result = call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 1, &zsnapshot, 0, NULL);
 
-    ZVAL_DESTRUCTOR(&zsnapshot);
-    ZVAL_DESTRUCTOR(&callback_result);
+    zval_ptr_dtor(&zsnapshot);
+    zval_ptr_dtor(&callback_result);
     return call_result;
 }
 
