@@ -80,7 +80,7 @@ static void destroy_logpoint(stackdriver_debugger_logpoint_t *logpoint)
     FREE_HASHTABLE(logpoint->expressions);
 
     if (Z_TYPE(logpoint->callback) != IS_NULL) {
-        ZVAL_DESTRUCTOR(&logpoint->callback);
+        zval_ptr_dtor(&logpoint->callback);
     }
 
     efree(logpoint);
@@ -101,7 +101,7 @@ static void destroy_message(stackdriver_debugger_message_t *message)
 {
     zend_string_release(message->filename);
     zend_string_release(message->log_level);
-    ZVAL_DESTRUCTOR(&message->message);
+    zval_ptr_dtor(&message->message);
 
     efree(message);
 }
@@ -117,16 +117,16 @@ static int handle_message_callback(zval *callback, stackdriver_debugger_message_
     add_assoc_long(&args[2], "line", message->lineno);
 
     if (call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 3, args, 0, NULL) != SUCCESS) {
-        ZVAL_DESTRUCTOR(&args[0]);
-        ZVAL_DESTRUCTOR(&args[1]);
-        ZVAL_DESTRUCTOR(&args[2]);
-        ZVAL_DESTRUCTOR(&callback_result);
+        zval_ptr_dtor(&args[0]);
+        zval_ptr_dtor(&args[1]);
+        zval_ptr_dtor(&args[2]);
+        zval_ptr_dtor(&callback_result);
         return FAILURE;
     }
-    ZVAL_DESTRUCTOR(&args[0]);
-    ZVAL_DESTRUCTOR(&args[1]);
-    ZVAL_DESTRUCTOR(&args[2]);
-    ZVAL_DESTRUCTOR(&callback_result);
+    zval_ptr_dtor(&args[0]);
+    zval_ptr_dtor(&args[1]);
+    zval_ptr_dtor(&args[2]);
+    zval_ptr_dtor(&callback_result);
     return SUCCESS;
 }
 
@@ -161,7 +161,7 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
                 zend_string_release(regex);
                 m = replaced;
             }
-            ZVAL_DESTRUCTOR(&retval);
+            zval_ptr_dtor(&retval);
         } ZEND_HASH_FOREACH_END();
     }
     ZVAL_STR(&message->message, m);
