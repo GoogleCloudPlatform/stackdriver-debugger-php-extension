@@ -152,16 +152,23 @@ void evaluate_logpoint(zend_execute_data *execute_data, stackdriver_debugger_log
         ZEND_HASH_FOREACH_NUM_KEY_VAL(logpoint->expressions, i, expression) {
             zval retval;
 
-            if (zend_eval_string(Z_STRVAL_P(expression), &retval, "expression evaluation") == SUCCESS) {
+            if (zend_eval_string(Z_STRVAL_P(expression), &retval, "expression evaluation") != SUCCESS ||
+                EG(exception) != NULL) {
+                char * error;
+                zend_clear_exception();
+                spprintf(&error, sizeof("{ERROR IN EXPRESSION }") + 2, "{ERROR IN EXPRESSION %d}", i);
+                ZVAL_STRING(&retval, error);
+                efree(error);
+            } else {
                 convert_to_string(&retval);
-
-                zend_string *regex = strpprintf(sizeof("/(?<!\\$)\\$/") + 2, "/(?<!\\$)\\$%d/", i);
-                replaced = REGEX_REPLACE_ALL(regex, m, &retval);
-                zend_string_release(m);
-                zend_string_release(regex);
-                m = replaced;
             }
-            ZVAL_DESTRUCTOR(&retval);
+
+            zend_string *regex = strpprintf(sizeof("/(?<!\\$)\\$/") + 2, "/(?<!\\$)\\$%d/", i);
+            replaced = REGEX_REPLACE_ALL(regex, m, &retval);
+            zend_string_release(m);
+            zend_string_release(regex);
+            m = replaced;
+            zval_ptr_dtor(&retval);
         } ZEND_HASH_FOREACH_END();
     }
     ZVAL_STR(&message->message, m);
