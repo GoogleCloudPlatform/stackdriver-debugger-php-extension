@@ -425,12 +425,12 @@ static void capture_expressions(zend_execute_data *execute_data, stackdriver_deb
     ZEND_HASH_FOREACH_VAL(snapshot->expressions, expression) {
         zval retval;
 
-        if (zend_eval_string(Z_STRVAL_P(expression), &retval, "expression evaluation") == SUCCESS) {
-            zend_hash_add(snapshot->evaluated_expressions, Z_STR_P(expression), &retval);
-        } else {
-            ZVAL_STRING(&retval, "ERROR");
-            zend_hash_add(snapshot->evaluated_expressions, Z_STR_P(expression), &retval);
+        if (zend_eval_string(Z_STRVAL_P(expression), &retval, "expression evaluation") != SUCCESS ||
+            EG(exception) != NULL) {
+            zend_clear_exception();
+            ZVAL_STRING(&retval, "ERROR IN EXPRESSION");
         }
+        zend_hash_add(snapshot->evaluated_expressions, Z_STR_P(expression), &retval);
     } ZEND_HASH_FOREACH_END();
 }
 
