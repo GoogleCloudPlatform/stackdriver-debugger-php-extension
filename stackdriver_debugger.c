@@ -101,6 +101,7 @@ PHP_INI_MH(OnUpdate_stackdriver_debugger_max_memory);
 /* Registers php.ini directives */
 PHP_INI_BEGIN()
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS, NULL, PHP_INI_ALL, OnUpdate_stackdriver_debugger_whitelisted_functions)
+    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_METHODS, NULL, PHP_INI_ALL, OnUpdate_stackdriver_debugger_whitelisted_methods)
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME, "10", PHP_INI_ALL, NULL)
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE, "1", PHP_INI_ALL, NULL)
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_MEMORY, "10", PHP_INI_ALL, OnUpdate_stackdriver_debugger_max_memory)
