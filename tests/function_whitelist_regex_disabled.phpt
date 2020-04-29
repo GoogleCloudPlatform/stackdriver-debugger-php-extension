@@ -1,10 +1,10 @@
 --TEST--
-Stackdriver Debugger: Allowing a whitelisted function and a whitelisted method from ini_set
+Stackdriver Debugger: Not allowing a whitelisted function regex if regex are not enabled
+--INI--
+stackdriver_debugger.function_whitelist="/oo/"
+stackdriver_debugger.method_whitelist="/ar/"
 --FILE--
 <?php
-
-ini_set('stackdriver_debugger.function_whitelist', 'foo');
-ini_set('stackdriver_debugger.method_whitelist', 'bar');
 
 $statements = [
     'foo($bar)',
@@ -24,11 +24,11 @@ foreach ($statements as $statement) {
 
 ?>
 --EXPECT--
-string(3) "foo"
-string(3) "bar"
-statement: 'foo($bar)' valid: true
+string(4) "/oo/"
+string(4) "/ar/"
+statement: 'foo($bar)' valid: false
 statement: 'bar($foo)' valid: false
 statement: 'asdf()' valid: false
-statement: '$foo->bar()' valid: true
+statement: '$foo->bar()' valid: false
 statement: '$bar->foo()' valid: false
 statement: '$foo->asdf($bar)' valid: false

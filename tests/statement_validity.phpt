@@ -23,6 +23,8 @@ $statements = [
     'count([]) == 0',
     'count(array_keys([])) == 0',
     'Foo\Bar::asdf()',
+    '$foo->bar()',
+    '$foo->asdf()',
 ];
 
 foreach ($statements as $statement) {
@@ -49,3 +51,5 @@ statement: 'count(array([])) == 0' valid: true
 statement: 'count([]) == 0' valid: true
 statement: 'count(array_keys([])) == 0' valid: true
 statement: 'Foo\Bar::asdf()' valid: false
+statement: '$foo->bar()' valid: false
+statement: '$foo->asdf()' valid: false
