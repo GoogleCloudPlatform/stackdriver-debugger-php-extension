@@ -224,6 +224,22 @@ ini_set('stackdriver_debugger.method_whitelist', 'getId,isDeleted');
 
 Note that this list is applied to any class or object, so make sure that the methods in this list do not produce any side effects for any class. This setting does not apply to static methods which should be specified in the global function whitelist with their full namespace.
 
+### Using regular expressions in whitelisted function names
+
+You can allow the use of regular expressions in the list of functions listed in the `stackdriver_debugger.function_whitelist` ini setting by setting
+`stackdriver_debugger.allow_regex` to `1`:
+
+```
+# in php.ini
+stackdriver_debugger.allow_regex=1
+```
+
+```php
+ini_set('stackdriver_debugger.allow_regex', '1');
+```
+
+This will allow you for example to add this expression to the list of whitelisted functions `"/^DateTime::/"` and this should allow you to run any of the `DateTime` static functions
+
 ## Design
 
 For more information on the design of this project, see

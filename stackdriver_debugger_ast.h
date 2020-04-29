@@ -30,5 +30,6 @@ int stackdriver_debugger_breakpoint_injected(zend_string *filename, zend_string 
 
 PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions);
 PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_methods);
+PHP_INI_MH(OnUpdate_stackdriver_debugger_allow_regex);
 
 #endif /* PHP_STACKDRIVER_DEBUGGER_AST_H */

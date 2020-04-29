@@ -31,6 +31,7 @@
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME "stackdriver_debugger.max_time"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE "stackdriver_debugger.max_time_percentage"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_MEMORY "stackdriver_debugger.max_memory"
+#define PHP_STACKDRIVER_DEBUGGER_INI_ALLOW_REGEX "stackdriver_debugger.allow_regex"
 
 PHP_FUNCTION(stackdriver_debugger_version);
 
@@ -75,6 +76,7 @@ ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
     size_t memory_used;
     size_t max_memory;
     zend_bool opcache_enabled;
+    zend_bool allow_regex;
 ZEND_END_MODULE_GLOBALS(stackdriver_debugger)
 
 extern ZEND_DECLARE_MODULE_GLOBALS(stackdriver_debugger)
