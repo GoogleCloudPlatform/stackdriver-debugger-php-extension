@@ -20,6 +20,7 @@
 #include "stackdriver_debugger_logpoint.h"
 #include "zend_language_scanner.h"
 #include "zend_exceptions.h"
+#include "ext/pcre/php_pcre.h"
 #include "main/php_ini.h"
 #include "zend_ini.h"
 
@@ -392,9 +393,42 @@ static int valid_debugger_call(zend_string *function_name)
         return SUCCESS;
     }
 
-    if (STACKDRIVER_DEBUGGER_G(user_whitelisted_functions) &&
-        zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_name) != NULL) {
-        return SUCCESS;
+    if (STACKDRIVER_DEBUGGER_G(user_whitelisted_functions)) {
+        if (STACKDRIVER_DEBUGGER_G(allow_regex)) {
+            zend_string *function_in_list;
+            ZEND_HASH_FOREACH_STR_KEY(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_in_list) {
+                /*
+                 * If the string starts with '/' we assume it is a regex
+                 * otherwise we do a simple string comparison
+                 */
+                if (ZSTR_VAL(function_in_list)[0] == '/') {
+                    pcre_cache_entry *pce;
+                    pce = pcre_get_compiled_regex_cache(function_in_list);
+                    if (pce == NULL) {
+                        php_error_docref(NULL, E_WARNING, "Regex in function list is invalid");
+                        return FAILURE;
+                    } else {
+                        zval retval;
+
+                        ZVAL_NULL(&retval);
+
+                        php_pcre_match_impl(pce, function_name, &retval, NULL, 0, 0, 0, 0);
+
+                        if (Z_LVAL(retval) == 1) {
+                            return SUCCESS;
+                        }
+                    }
+                } else {
+                    if (zend_string_equals(function_in_list, function_name)) {
+                        return SUCCESS;
+                    }
+                }
+            } ZEND_HASH_FOREACH_END();
+        } else {
+            if (zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_name) != NULL) {
+                return SUCCESS;
+            }
+        }
     }
 
     return FAILURE;
@@ -845,6 +879,8 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
         register_user_whitelisted_functions_str(ini, strlen(ini));
     }
 
+    STACKDRIVER_DEBUGGER_G(allow_regex) = INI_BOOL(PHP_STACKDRIVER_DEBUGGER_INI_ALLOW_REGEX);
+
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(ast_to_clean));
     zend_hash_init(STACKDRIVER_DEBUGGER_G(ast_to_clean), 8, NULL, ast_to_clean_dtor, 1);
 
@@ -926,6 +962,17 @@ PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions)
         zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
         zend_hash_init(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
         register_user_whitelisted_functions_str(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
+    }
+    return SUCCESS;
+}
+
+/**
+ * Callback for when the user changes the allow_regex php.ini setting.
+ */
+PHP_INI_MH(OnUpdate_stackdriver_debugger_allow_regex)
+{
+    if (new_value != NULL) {
+        STACKDRIVER_DEBUGGER_G(allow_regex) = zend_ini_parse_bool(new_value);
     }
     return SUCCESS;
 }
