@@ -12,7 +12,7 @@ $statements = [
     'asdf()',
     '$foo->bar()',
     '$bar->foo()',
-    '$foo->asdf()',
+    '$foo->asdf($bar)',
 ];
 var_dump(ini_get('stackdriver_debugger.function_whitelist'));
 var_dump(ini_get('stackdriver_debugger.method_whitelist'));
@@ -31,4 +31,4 @@ statement: 'bar($foo)' valid: false
 statement: 'asdf()' valid: false
 statement: '$foo->bar()' valid: true
 statement: '$bar->foo()' valid: false
-statement: '$foo->asdf()' valid: false
+statement: '$foo->asdf($bar)' valid: false

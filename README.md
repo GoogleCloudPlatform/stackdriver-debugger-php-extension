@@ -224,9 +224,9 @@ ini_set('stackdriver_debugger.method_whitelist', 'getId,isDeleted');
 
 Note that this list is applied to any class or object, so make sure that the methods in this list do not produce any side effects for any class. This setting does not apply to static methods which should be specified in the global function whitelist with their full namespace.
 
-### Using regular expressions in whitelisted function names
+### Using regular expressions in whitelisted function and method names
 
-You can allow the use of regular expressions in the list of functions listed in the `stackdriver_debugger.function_whitelist` ini setting by setting
+You can allow the use of regular expressions in the list of functions or methods listed in the `stackdriver_debugger.function_whitelist` and ``stackdriver_debugger.method_whitelist` ini setting by setting
 `stackdriver_debugger.allow_regex` to `1`:
 
 ```

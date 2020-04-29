@@ -384,6 +384,46 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
     return SUCCESS;
 }
 
+static int valid_user_whitelisted_function_or_method(HashTable *function_list, zend_string *function_name)
+{
+    if (STACKDRIVER_DEBUGGER_G(allow_regex)) {
+        zend_string *function_in_list;
+        ZEND_HASH_FOREACH_STR_KEY(function_list, function_in_list) {
+            /*
+             * If the string starts with '/' we assume it is a regex
+             * otherwise we do a simple string comparison
+             */
+            if (ZSTR_VAL(function_in_list)[0] == '/') {
+                pcre_cache_entry *pce;
+                pce = pcre_get_compiled_regex_cache(function_in_list);
+                if (pce == NULL) {
+                    php_error_docref(NULL, E_WARNING, "Regex in function list is invalid");
+                    return FAILURE;
+                } else {
+                    zval retval;
+
+                    ZVAL_NULL(&retval);
+
+                    php_pcre_match_impl(pce, function_name, &retval, NULL, 0, 0, 0, 0);
+
+                    if (Z_LVAL(retval) == 1) {
+                        return SUCCESS;
+                    }
+                }
+            } else {
+                if (zend_string_equals(function_in_list, function_name)) {
+                    return SUCCESS;
+                }
+            }
+        } ZEND_HASH_FOREACH_END();
+    } else {
+        if (zend_hash_find(function_list, function_name) != NULL) {
+            return SUCCESS;
+        }
+    }
+    return FAILURE;
+}
+
 /**
  * Determine if the allowed function call is whitelisted.
  */
@@ -394,41 +434,10 @@ static int valid_debugger_call(zend_string *function_name)
     }
 
     if (STACKDRIVER_DEBUGGER_G(user_whitelisted_functions)) {
-        if (STACKDRIVER_DEBUGGER_G(allow_regex)) {
-            zend_string *function_in_list;
-            ZEND_HASH_FOREACH_STR_KEY(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_in_list) {
-                /*
-                 * If the string starts with '/' we assume it is a regex
-                 * otherwise we do a simple string comparison
-                 */
-                if (ZSTR_VAL(function_in_list)[0] == '/') {
-                    pcre_cache_entry *pce;
-                    pce = pcre_get_compiled_regex_cache(function_in_list);
-                    if (pce == NULL) {
-                        php_error_docref(NULL, E_WARNING, "Regex in function list is invalid");
-                        return FAILURE;
-                    } else {
-                        zval retval;
-
-                        ZVAL_NULL(&retval);
-
-                        php_pcre_match_impl(pce, function_name, &retval, NULL, 0, 0, 0, 0);
-
-                        if (Z_LVAL(retval) == 1) {
-                            return SUCCESS;
-                        }
-                    }
-                } else {
-                    if (zend_string_equals(function_in_list, function_name)) {
-                        return SUCCESS;
-                    }
-                }
-            } ZEND_HASH_FOREACH_END();
-        } else {
-            if (zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_name) != NULL) {
-                return SUCCESS;
-            }
-        }
+        return valid_user_whitelisted_function_or_method(
+            STACKDRIVER_DEBUGGER_G(user_whitelisted_functions),
+            function_name
+        );
     }
 
     return FAILURE;
@@ -439,9 +448,11 @@ static int valid_debugger_call(zend_string *function_name)
  */
 static int valid_debugger_method_call(zend_string *method_name)
 {
-    if (STACKDRIVER_DEBUGGER_G(user_whitelisted_methods) &&
-        zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_methods), method_name) != NULL) {
-        return SUCCESS;
+    if (STACKDRIVER_DEBUGGER_G(user_whitelisted_methods)) {
+        return valid_user_whitelisted_function_or_method(
+            STACKDRIVER_DEBUGGER_G(user_whitelisted_methods),
+            method_name
+        );
     }
     return FAILURE;
 }
