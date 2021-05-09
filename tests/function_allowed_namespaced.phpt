@@ -1,16 +1,27 @@
 --TEST--
-Stackdriver Debugger: Allowing a whitelisted function from ini_set
+Stackdriver Debugger: Allowing a namespaced function
+--INI--
+stackdriver_debugger.functions_allowed="foo,Foo\Bar::asdf"
 --FILE--
 <?php
 
-ini_set('stackdriver_debugger.function_whitelist', 'foo');
+namespace Foo;
+
+class Bar
+{
+    public static function asdf()
+    {
+        return true;
+    }
+}
 
 $statements = [
     'foo($bar)',
     'bar($foo)',
     'asdf()',
+    'Foo\Bar::asdf()',
 ];
-var_dump(ini_get('stackdriver_debugger.function_whitelist'));
+var_dump(ini_get('stackdriver_debugger.functions_allowed'));
 
 foreach ($statements as $statement) {
     $valid = @stackdriver_debugger_valid_statement($statement) ? 'true' : 'false';
@@ -19,7 +30,8 @@ foreach ($statements as $statement) {
 
 ?>
 --EXPECT--
-string(3) "foo"
+string(17) "foo,Foo\Bar::asdf"
 statement: 'foo($bar)' valid: true
 statement: 'bar($foo)' valid: false
 statement: 'asdf()' valid: false
+statement: 'Foo\Bar::asdf()' valid: true

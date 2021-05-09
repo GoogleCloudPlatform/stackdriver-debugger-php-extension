@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Google Inc.
+ * Copyright 2017 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef PHP_STACKDRIVER_DEBUGGER_RANDOM_H
-#define PHP_STACKDRIVER_DEBUGGER_RANDOM_H 1
+#ifndef PHP_STACKDRIVER_DEFINES_H
+#define PHP_STACKDRIVER_DEFINES_H 1
 
-#if PHP_VERSION_ID < 70100
-#include "standard/php_rand.h"
-#else
-#include "standard/php_mt_rand.h"
-#endif
-#include "standard/php_math.h"
-
-static zend_string *generate_breakpoint_id()
-{
 #if PHP_VERSION_ID < 80000
-    zval zv;
-    ZVAL_LONG(&zv, ((uint32_t) php_mt_rand()) >> 1);
-    return _php_math_longtobase(&zv, 16);
-#else
-    zend_long random_int = ((uint32_t) php_mt_rand()) >> 1;
-    return _php_math_longtobase(random_int, 16);
+#define STACKDRIVER_OBJ_P(v) (v)
+#ifndef Z_LINENO
+#define Z_LINENO(zval) (zval).u2.lineno
 #endif
-}
+#else
+#define STACKDRIVER_OBJ_P(v) Z_OBJ_P(v)
 
-#endif /* PHP_STACKDRIVER_DEBUGGER_RANDOM_H */
+#ifndef TSRMLS_D
+#define TSRMLS_D void
+#define TSRMLS_DC
+#define TSRMLS_C
+#define TSRMLS_CC
+#define TSRMLS_FETCH()
+#endif
+#endif
+
+#endif

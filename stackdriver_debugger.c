@@ -55,16 +55,19 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_valid_statement, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, statement, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_stackdriver_debugger_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 
 /* List of functions provided by this extension */
 static zend_function_entry stackdriver_debugger_functions[] = {
-    PHP_FE(stackdriver_debugger_version, NULL)
+    PHP_FE(stackdriver_debugger_version, arginfo_stackdriver_debugger_void)
     PHP_FE(stackdriver_debugger_snapshot, arginfo_stackdriver_debugger_snapshot)
     PHP_FE(stackdriver_debugger_add_snapshot, arginfo_stackdriver_debugger_add_snapshot)
-    PHP_FE(stackdriver_debugger_list_snapshots, NULL)
+    PHP_FE(stackdriver_debugger_list_snapshots, arginfo_stackdriver_debugger_void)
     PHP_FE(stackdriver_debugger_logpoint, arginfo_stackdriver_debugger_logpoint)
     PHP_FE(stackdriver_debugger_add_logpoint, arginfo_stackdriver_debugger_add_logpoint)
-    PHP_FE(stackdriver_debugger_list_logpoints, NULL)
+    PHP_FE(stackdriver_debugger_list_logpoints, arginfo_stackdriver_debugger_void)
     PHP_FE(stackdriver_debugger_valid_statement, arginfo_stackdriver_debugger_valid_statement)
     PHP_FE_END
 };
@@ -100,7 +103,7 @@ PHP_INI_MH(OnUpdate_stackdriver_debugger_max_memory);
 
 /* Registers php.ini directives */
 PHP_INI_BEGIN()
-    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS, NULL, PHP_INI_ALL, OnUpdate_stackdriver_debugger_whitelisted_functions)
+    PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_ALLOWED_FUNCTIONS, NULL, PHP_INI_ALL, OnUpdate_stackdriver_debugger_allowed_functions)
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME, "10", PHP_INI_ALL, NULL)
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE, "1", PHP_INI_ALL, NULL)
     PHP_INI_ENTRY(PHP_STACKDRIVER_DEBUGGER_INI_MAX_MEMORY, "10", PHP_INI_ALL, OnUpdate_stackdriver_debugger_max_memory)
@@ -210,10 +213,16 @@ PHP_FUNCTION(stackdriver_debugger_list_logpoints)
  */
 PHP_FUNCTION(stackdriver_debugger_valid_statement)
 {
-    zend_string *statement = NULL;
+    zend_string *statement;
+#ifndef FAST_ZPP
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &statement) == FAILURE) {
         RETURN_FALSE;
     }
+#else
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(statement);
+    ZEND_PARSE_PARAMETERS_END();
+#endif
 
     if (valid_debugger_statement(statement) != SUCCESS) {
         RETURN_FALSE;
@@ -287,9 +296,15 @@ PHP_FUNCTION(stackdriver_debugger_snapshot)
         RETURN_FALSE;
     }
 
+#ifndef FAST_ZPP
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &snapshot_id) == FAILURE) {
         RETURN_FALSE;
     }
+#else
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(snapshot_id);
+    ZEND_PARSE_PARAMETERS_END();
+#endif
 
     start = stackdriver_debugger_now();
     start_memory = zend_memory_usage(0);
@@ -333,9 +348,15 @@ PHP_FUNCTION(stackdriver_debugger_logpoint)
         RETURN_FALSE;
     }
 
+#ifndef FAST_ZPP
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &logpoint_id) == FAILURE) {
         RETURN_FALSE;
     }
+#else
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(logpoint_id);
+    ZEND_PARSE_PARAMETERS_END();
+#endif
 
     start = stackdriver_debugger_now();
     start_memory = zend_memory_usage(0);
@@ -398,48 +419,51 @@ PHP_FUNCTION(stackdriver_debugger_add_snapshot)
     zval *zv = NULL, *callback = NULL;
     zend_long max_stack_eval_depth = 0;
 
+#ifndef FAST_ZPP
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sl|h", &filename, &lineno, &options) == FAILURE) {
         RETURN_FALSE;
     }
+#else
+    ZEND_PARSE_PARAMETERS_START(2, 3)
+        Z_PARAM_STR(filename);
+        Z_PARAM_LONG(lineno);
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY_HT(options);
+    ZEND_PARSE_PARAMETERS_END();
+#endif
 
     if (options != NULL) {
-        zv = zend_hash_str_find(options, "snapshotId", strlen("snapshotId"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "snapshotId", sizeof("snapshotId")-1)) != NULL && !Z_ISNULL_P(zv)) {
             snapshot_id = Z_STR_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "condition", strlen("condition"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "condition", sizeof("condition")-1)) != NULL && !Z_ISNULL_P(zv)) {
             condition = Z_STR_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "expressions", strlen("expressions"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "expressions", sizeof("expressions")-1)) != NULL && !Z_ISNULL_P(zv)) {
             expressions = Z_ARRVAL_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "sourceRoot", strlen("sourceRoot"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "sourceRoot", sizeof("sourceRoot")-1)) != NULL && !Z_ISNULL_P(zv)) {
             source_root = Z_STR_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "callback", strlen("callback"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "callback", sizeof("callback")-1)) != NULL && !Z_ISNULL_P(zv)) {
             callback = zv;
         }
 
-        zv = zend_hash_str_find(options, "maxDepth", strlen("maxDepth"));
-        if (zv != NULL && Z_TYPE_P(zv) == IS_LONG) {
+        if ((zv = zend_hash_str_find(options, "maxDepth", sizeof("maxDepth")-1)) != NULL && Z_TYPE_P(zv) == IS_LONG) {
             max_stack_eval_depth = Z_LVAL_P(zv);
         }
     }
 
     if (source_root == NULL) {
         source_root = EX(prev_execute_data)->func->op_array.filename;
-        char *current_file = estrndup(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
-        size_t dirlen = php_dirname(current_file, ZSTR_LEN(source_root));
-        full_filename = stackdriver_debugger_full_filename(filename, current_file, dirlen);
-        efree(current_file);
+        zend_string *current_file = zend_string_init(ZSTR_VAL(source_root), ZSTR_LEN(source_root), 0);
+        size_t dirlen = php_dirname(ZSTR_VAL(current_file), ZSTR_LEN(source_root));
+        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(current_file), dirlen);
+        zend_string_release(current_file);
     } else {
         full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), ZSTR_LEN(source_root));
     }
@@ -480,43 +504,49 @@ PHP_FUNCTION(stackdriver_debugger_add_logpoint)
     HashTable *options = NULL, *expressions = NULL;
     zval *zv = NULL, *callback = NULL;
 
+#ifndef FAST_ZPP
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SlSS|h", &filename, &lineno, &log_level, &format, &options) == FAILURE) {
         RETURN_FALSE;
     }
+#else
+    ZEND_PARSE_PARAMETERS_START(4, 5)
+        Z_PARAM_STR(filename);
+        Z_PARAM_LONG(lineno);
+        Z_PARAM_STR(log_level);
+        Z_PARAM_STR(format);
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY_HT(options);
+    ZEND_PARSE_PARAMETERS_END();
+#endif
 
     if (options != NULL) {
-        zv = zend_hash_str_find(options, "snapshotId", strlen("snapshotId"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "snapshotId", strlen("snapshotId"))) != NULL && !Z_ISNULL_P(zv)) {
             snapshot_id = Z_STR_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "condition", strlen("condition"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "condition", strlen("condition"))) != NULL && !Z_ISNULL_P(zv)) {
             condition = Z_STR_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "expressions", strlen("expressions"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "expressions", strlen("expressions"))) != NULL && !Z_ISNULL_P(zv)) {
             expressions = Z_ARRVAL_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "sourceRoot", strlen("sourceRoot"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "sourceRoot", strlen("sourceRoot"))) != NULL && !Z_ISNULL_P(zv)) {
             source_root = Z_STR_P(zv);
         }
 
-        zv = zend_hash_str_find(options, "callback", strlen("callback"));
-        if (zv != NULL && !Z_ISNULL_P(zv)) {
+        if ((zv = zend_hash_str_find(options, "callback", strlen("callback"))) != NULL && !Z_ISNULL_P(zv)) {
             callback = zv;
         }
     }
 
     if (source_root == NULL) {
         source_root = EX(prev_execute_data)->func->op_array.filename;
-        char *current_file = estrndup(ZSTR_VAL(source_root), ZSTR_LEN(source_root));
-        size_t dirlen = php_dirname(current_file, ZSTR_LEN(source_root));
-        full_filename = stackdriver_debugger_full_filename(filename, current_file, dirlen);
-        efree(current_file);
+        zend_string *current_file = zend_string_init(ZSTR_VAL(source_root), ZSTR_LEN(source_root), 0);
+        size_t dirlen = php_dirname(ZSTR_VAL(current_file), ZSTR_LEN(source_root));
+        full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(current_file), dirlen);
+        zend_string_release(current_file);
     } else {
         full_filename = stackdriver_debugger_full_filename(filename, ZSTR_VAL(source_root), ZSTR_LEN(source_root));
     }

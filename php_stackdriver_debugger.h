@@ -24,9 +24,9 @@
 #include "php.h"
 #include "stackdriver_debugger.h"
 
-#define PHP_STACKDRIVER_DEBUGGER_VERSION "0.2.0"
+#define PHP_STACKDRIVER_DEBUGGER_VERSION "0.3.0"
 #define PHP_STACKDRIVER_DEBUGGER_EXTNAME "stackdriver_debugger"
-#define PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS "stackdriver_debugger.function_whitelist"
+#define PHP_STACKDRIVER_DEBUGGER_INI_ALLOWED_FUNCTIONS "stackdriver_debugger.functions_allowed"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME "stackdriver_debugger.max_time"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_TIME_PERCENTAGE "stackdriver_debugger.max_time_percentage"
 #define PHP_STACKDRIVER_DEBUGGER_INI_MAX_MEMORY "stackdriver_debugger.max_memory"
@@ -43,7 +43,7 @@ PHP_RSHUTDOWN_FUNCTION(stackdriver_debugger);
 
 ZEND_BEGIN_MODULE_GLOBALS(stackdriver_debugger)
     /* map of function name -> empty null zval */
-    HashTable *user_whitelisted_functions;
+    HashTable *user_allowed_functions;
 
     /* map of filename -> stackdriver_debugger_snapshot[] */
     HashTable *snapshots_by_file;

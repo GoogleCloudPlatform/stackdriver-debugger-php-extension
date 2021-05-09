@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2017 Google Inc.
+# Copyright 2018 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# A script for installing necessary software on CI systems.
+# A script for running functional tests
 
-set -ex
+set -e
 
-if [ -z "${APPENGINE_PROJECT_ID}" ]; then
-    APPENGINE_PROJECT_ID="google-appengine"
-fi
+# PARAMS
+# 1: path to phpt file associated with in tests/
+test=$1
 
-gcloud builds submit \
-    --config=cloudbuild.yaml \
-    --substitutions=_APPENGINE_PROJECT_ID=$APPENGINE_PROJECT_ID,_GOOGLE_PROJECT_ID=$GOOGLE_PROJECT_ID,_GOOGLE_CREDENTIALS_BASE64=$GOOGLE_CREDENTIALS_BASE64,_PHP_DOCKER_GOOGLE_CREDENTIALS=$PHP_DOCKER_GOOGLE_CREDENTIALS,_CLOUDSDK_ACTIVE_CONFIG_NAME=$CLOUDSDK_ACTIVE_CONFIG_NAME \
-    .
+testFile="${test%.*}.val"
+
+ZEND_DONT_UNLOAD_MODULES=1 USE_ZEND_ALLOC=0 valgrind \
+    --leak-check=full \
+    --show-reachable=yes \
+    --track-origins=yes \
+    /usr/bin/php \
+    -dextension=/build/.libs/stackdriver_debugger.so \
+    $1 > $testFile 2>&1

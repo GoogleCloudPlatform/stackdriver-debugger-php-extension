@@ -240,7 +240,7 @@ Validation will happen in 2 places.
 #### Disallowing Function Calls in Conditions and Expressions
 
 We will disallow all function calls except those that are explicitly marked as
-safe. We maintain a list of build-in functions that are whitelisted. We also
+safe. We maintain a list of build-in functions that are allowed. We also
 provide a `php.ini` setting that allows you to specify your own list of allowed
 function calls.
 

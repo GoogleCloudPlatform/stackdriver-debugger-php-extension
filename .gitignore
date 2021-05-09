@@ -29,3 +29,6 @@ tests/**/*.diff
 tests/**/*.sh
 vendor/
 composer.lock
+.vscode/c_cpp_properties.json
+.vscode/tasks.json
+.vscode/settings.json

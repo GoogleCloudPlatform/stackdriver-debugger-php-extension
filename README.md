@@ -183,22 +183,22 @@ or
 ini_set('stackdriver_debugger.max_time', '50');
 ```
 
-### Whitelisting Function Calls in Conditions and Evaluated Expressions
+### Allowing Function Calls in Conditions and Evaluated Expressions
 
 Setting a snapshot or logpoint should not affect the state of any application.
 By default, we disallow any unknown function calls that could potentially
 modify the state of your application.
 
 You can add additional function calls to this list by setting the ini config
-`stackdriver_debugger.function_whitelist`:
+`stackdriver_debugger.functions_allowed`:
 
 ```
 # in php.ini
-stackdriver_debugger.function_whitelist="foo,bar,MyClass::function"
+stackdriver_debugger.functions_allowed="foo,bar,MyClass::function"
 ```
 
 ```php
-ini_set('stackdriver_debugger.function_whitelist', 'foo,bar,MyClass::function');
+ini_set('stackdriver_debugger.functions_allowed', 'foo,bar,MyClass::function');
 ```
 
 Note that all function names specified here must be declared with their full

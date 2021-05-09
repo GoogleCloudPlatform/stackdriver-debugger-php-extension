@@ -18,6 +18,8 @@
 #define PHP_STACKDRIVER_DEBUGGER_SNAPSHOT_H 1
 
 #include "php.h"
+#include "stackdriver_debugger_defines.h"
+
 
 typedef struct stackdriver_debugger_variable_t {
     zend_string *name;
