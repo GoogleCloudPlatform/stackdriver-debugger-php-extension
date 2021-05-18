@@ -62,7 +62,7 @@ static void destroy_stackframe(stackdriver_debugger_stackframe_t *stackframe)
 {
     int i;
 
-    if (stackframe->function && (int)stackframe->function != -1) {
+    if (stackframe->function) {
         zend_string_release(stackframe->function);
     }
 
@@ -122,7 +122,7 @@ static void destroy_snapshot(stackdriver_debugger_snapshot_t *snapshot)
     FREE_HASHTABLE(snapshot->stackframes);
 
     if (Z_TYPE(snapshot->callback) != IS_NULL) {
-        ZVAL_DESTRUCTOR(&snapshot->callback);
+        ZVAL_PTR_DTOR(&(snapshot->callback));
     }
     efree(snapshot);
 }
@@ -134,6 +134,7 @@ static void destroy_snapshot(stackdriver_debugger_snapshot_t *snapshot)
 static void variable_to_zval(zval *return_value, stackdriver_debugger_variable_t *variable)
 {
     zend_string *hash = NULL;
+
     array_init(return_value);
     add_assoc_str(return_value, "name", variable->name);
     add_assoc_zval(return_value, "value", &variable->value);
@@ -144,11 +145,11 @@ static void variable_to_zval(zval *return_value, stackdriver_debugger_variable_t
             break;
         case IS_ARRAY:
             /* Use the memory address of the zend_array */
-            hash = strpprintf(16, "%016zx", Z_ARR(variable->value));
+            hash = strpprintf(16, "%016zx", (size_t)Z_ARR(variable->value));
             break;
         case IS_STRING:
             /* Use the internal HashTable value */
-            hash = strpprintf(32, "%016zx", ZSTR_HASH(Z_STR(variable->value)));
+            hash = strpprintf(32, "%016zx", Z_STRHASH(variable->value));
             break;
     }
     if (hash != NULL) {
@@ -438,10 +439,10 @@ static int handle_snapshot_callback(zval *callback, stackdriver_debugger_snapsho
 {
     zval zsnapshot, callback_result;
     snapshot_to_zval(&zsnapshot, snapshot);
-    int call_result = call_user_function_ex(EG(function_table), NULL, callback, &callback_result, 1, &zsnapshot, 0, NULL);
+    int call_result = call_user_function(EG(function_table), NULL, callback, &callback_result, 1, &zsnapshot);
 
-    ZVAL_DESTRUCTOR(&zsnapshot);
-    ZVAL_DESTRUCTOR(&callback_result);
+    zval_ptr_dtor_nogc(&zsnapshot);
+    zval_ptr_dtor_nogc(&callback_result);
     return call_result;
 }
 

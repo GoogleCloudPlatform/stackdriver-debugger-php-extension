@@ -14,32 +14,45 @@
 
 ARG BASE_IMAGE
 FROM $BASE_IMAGE
+ARG GOOGLE_CREDENTIALS_BASE64
+ARG CLOUDSDK_ACTIVE_CONFIG_NAME
+ARG GOOGLE_PROJECT_ID
+ARG PHP_DOCKER_GOOGLE_CREDENTIALS
 
 RUN mkdir -p /build && \
     apt-get update -y && \
     apt-get install -y -q --no-install-recommends \
+        apt-transport-https \
         build-essential \
+        ca-certificates \
         g++ \
         gcc \
+        gnupg \
         libc-dev \
         make \
         autoconf \
         curl \
         git-core \
+        nano \
+        valgrind \
         unzip
+
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg  add - && apt-get update -y && apt-get install google-cloud-sdk -y
 
 COPY . /build/
 
 WORKDIR /build
+RUN chmod 0755 /build/build.sh
+
+ENV GOOGLE_CREDENTIALS_BASE64=${GOOGLE_CREDENTIALS_BASE64:-}
+ENV CLOUDSDK_ACTIVE_CONFIG_NAME=${CLOUDSDK_ACTIVE_CONFIG_NAME:-default}
+ENV GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-google-cloud}
+ENV PHP_DOCKER_GOOGLE_CREDENTIALS=${PHP_DOCKER_GOOGLE_CREDENTIALS:-/build/gcp-creds.json}
+ENV GOOGLE_APPLICATION_CREDENTIALS=${PHP_DOCKER_GOOGLE_CREDENTIALS}
+RUN /build/scripts/install_test_dependencies.sh
 
 ENV TEST_PHP_ARGS="-q" \
     REPORT_EXIT_STATUS=1
 
-RUN phpize && \
-    ./configure --enable-stackdriver-debugger && \
-    make clean && \
-    make && \
-    make test || ((find . -name '*.diff' | xargs cat) && false) && \
-    make install && \
-    (composer -V || scripts/install_composer.sh) && \
-    scripts/run_functional_tests.sh
+RUN /build/build.sh
+#ENTRYPOINT [ "/bin/bash" ]

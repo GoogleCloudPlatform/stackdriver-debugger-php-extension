@@ -17,8 +17,8 @@ $statements = [
     'false;',
     '$times == 4',
     // syntax errors
-    'asdf->foo;',
-    // whitelisted function
+    '->foo;',
+    // allowed function
     'count(array([])) == 0',
     'count([]) == 0',
     'count(array_keys([])) == 0',
@@ -44,7 +44,7 @@ statement: 'foo($bar);' valid: false
 statement: 'true;' valid: true
 statement: 'false;' valid: true
 statement: '$times == 4' valid: true
-statement: 'asdf->foo;' valid: false
+statement: '->foo;' valid: false
 statement: 'count(array([])) == 0' valid: true
 statement: 'count([]) == 0' valid: true
 statement: 'count(array_keys([])) == 0' valid: true

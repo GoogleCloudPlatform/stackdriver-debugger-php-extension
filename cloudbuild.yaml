@@ -1,38 +1,142 @@
-# This cloudbuild.yaml is used to test the php extension against multiple versions of php
 steps:
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=php:7.1', '.']
-    id: php71-nts
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=php:7.1-zts', '.']
-    id: php71-zts
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=php:7.0', '.']
-    id: php70-nts
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=php:7.0-zts', '.']
-    id: php70-zts
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=php:7.2', '.']
-    id: php72-nts
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=php:7.2-zts', '.']
-    id: php72-zts
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php72', '.']
-    id: php72-gae
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php71', '.']
-    id: php71-gae
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/google-appengine/php70', '.']
-    id: php70-gae
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php71-debug', '.']
-    id: php71-debug
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php71-32bit', '.']
-    id: php71-32bit
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'BASE_IMAGE=gcr.io/php-stackdriver/php70-32bit', '.']
-    id: php70-32bit
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=gcr.io/${_APPENGINE_PROJECT_ID}/php73'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php73-gae
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=gcr.io/${_APPENGINE_PROJECT_ID}/php72'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php72-gae
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=php:8.0'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php80-nts
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=php:8.0-zts'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php80-zts
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=php:7.4'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php74-nts
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=php:7.4-zts'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php74-zts
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=php:7.3'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php73-nts
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=php:7.3-zts'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php73-zts
+- name: gcr.io/cloud-builders/docker
+  args:
+  - 'build'
+  - '--build-arg'
+  - 'BASE_IMAGE=gcr.io/php-stackdriver/php71-debug'
+  - '--build-arg'
+  - 'GOOGLE_CREDENTIALS_BASE64=${_GOOGLE_CREDENTIALS_BASE64}'
+  - '--build-arg'
+  - 'CLOUDSDK_ACTIVE_CONFIG_NAME=${_CLOUDSDK_ACTIVE_CONFIG_NAME}'
+  - '--build-arg'
+  - 'GOOGLE_PROJECT_ID=${_GOOGLE_PROJECT_ID}'
+  - '--build-arg'
+  - 'PHP_DOCKER_GOOGLE_CREDENTIALS=${_PHP_DOCKER_GOOGLE_CREDENTIALS}'
+  - '.'
+  id: php71-debug
+timeout: 2100s
+substitutions:
+    _PHP_DOCKER_GOOGLE_CREDENTIALS: /build/gcp-creds.json
+    _APPENGINE_PROJECT_ID: google-appengine
+    _CLOUDSDK_ACTIVE_CONFIG_NAME: default
+    _GOOGLE_PROJECT_ID: $PROJECT_ID

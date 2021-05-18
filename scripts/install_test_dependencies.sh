@@ -17,18 +17,6 @@
 
 set -ex
 
-if [ "${INSTALL_GCLOUD}" == "true" ]; then
-    # Install gcloud
-    if [ ! -d ${HOME}/gcloud/google-cloud-sdk ]; then
-        mkdir -p ${HOME}/gcloud &&
-        wget https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz --directory-prefix=${HOME}/gcloud &&
-        cd "${HOME}/gcloud" &&
-            tar xzf google-cloud-sdk.tar.gz &&
-            ./google-cloud-sdk/install.sh --usage-reporting false --path-update false --command-completion false &&
-            cd "${TEST_BUILD_DIR}";
-    fi
-fi
-
 if [ -z "${CLOUDSDK_ACTIVE_CONFIG_NAME}" ]; then
     echo "You need to set CLOUDSDK_ACTIVE_CONFIG_NAME envvar."
     exit 1
@@ -64,13 +52,9 @@ fi
 gcloud auth activate-service-account \
     --key-file "${PHP_DOCKER_GOOGLE_CREDENTIALS}"
 
-if [ "${CIRCLECI}" == "true" ]; then
-    # Need sudo on circleci:
-    # https://discuss.circleci.com/t/gcloud-components-update-version-restriction/3725
-    # They also overrides the PATH to use
-    # /opt/google-cloud-sdk/bin/gcloud so we can not easily use our
-    # own gcloud
-    sudo /opt/google-cloud-sdk/bin/gcloud -q components update beta
-else
-    gcloud -q components update beta
-fi
+# https://cloud.google.com/sdk/docs/install
+# Note: Updating and removing components using gcloud components is disabled
+# if you installed Cloud SDK using apt-get or yum.
+#
+# To manage the Cloud SDK in this case, continue using the package management tool
+# used during installation.

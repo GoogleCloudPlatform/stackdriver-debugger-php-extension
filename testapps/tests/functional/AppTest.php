@@ -28,21 +28,21 @@ class AppTest extends TestCase
 
     private $client;
 
-    public static function setupBeforeClass()
+    public static function setupBeforeClass(): void
     {
         $client = new DebuggerClient();
         self::$debuggee = $client->debuggee('debuggeeid');
         self::$storage = new FileBreakpointStorage();
     }
 
-    public function setUp()
+    public function setUp(): void
     {
         // clear any breakpoints
         $this->clearBreakpoints();
         $this->client = new Client();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         $this->clearBreakpoints();
     }
@@ -65,7 +65,7 @@ class AppTest extends TestCase
         // no logpoints should be set, so no logpoint is found
         $this->fetchPath('/hello/jeff');
         $content = $this->client->getResponse()->getContent();
-        $this->assertNotContains('[INFO] LOGPOINT: hello there', $content);
+        $this->assertStringNotContainsString('[INFO] LOGPOINT: hello there', $content);
 
         // add a logpoint
         $this->addBreakpoint('logpoint1', 'web/index.php', 34, [
@@ -77,7 +77,7 @@ class AppTest extends TestCase
         for ($i = 0; $i < 5; $i++) {
             $this->fetchPath('/hello/jeff');
             $content = $this->client->getResponse()->getContent();
-            $this->assertContains('[INFO] LOGPOINT: hello there', $content);
+            $this->assertStringNotContainsString('[INFO] LOGPOINT: hello there', $content);
         }
 
         // remove the breakpoint
@@ -86,7 +86,7 @@ class AppTest extends TestCase
         // no logpoints should be set any more
         $this->fetchPath('/hello/jeff');
         $content = $this->client->getResponse()->getContent();
-        $this->assertNotContains('[INFO] LOGPOINT: hello there', $content);
+        $this->assertStringNotContainsString('[INFO] LOGPOINT: hello there', $content);
     }
 
     private function fetchPath($path, $method = 'GET')

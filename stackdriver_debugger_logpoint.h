@@ -18,6 +18,7 @@
 #define PHP_STACKDRIVER_DEBUGGER_LOGPOINT_H 1
 
 #include "php.h"
+#include "stackdriver_debugger_defines.h"
 
 typedef struct stackdriver_debugger_logpoint_t {
     zend_string *id;

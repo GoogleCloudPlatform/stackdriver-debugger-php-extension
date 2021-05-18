@@ -21,5 +21,5 @@ echo "Number of breakpoints: " . count($list) . PHP_EOL;
 --EXPECTF--
 bool(true)
 
-Notice: %s in expression evaluation on line 1
+%s: %s in expression evaluation on line 1
 Number of breakpoints: 1

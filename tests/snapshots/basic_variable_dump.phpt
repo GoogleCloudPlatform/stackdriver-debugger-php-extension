@@ -24,7 +24,9 @@ foreach ($breakpoint['stackframes'] as $sf) {
 }
 
 $loopStackframe = $breakpoint['stackframes'][0];
+echo "predump" . PHP_EOL;
 var_dump($loopStackframe['locals']);
+echo "postdump" . PHP_EOL;
 ?>
 --EXPECTF--
 bool(true)
@@ -33,6 +35,7 @@ Number of breakpoints: 1
 Number of stackframes: 2
 loop.php:7
 basic_variable_dump.php:8
+predump
 array(4) {
   [0]=>
   array(2) {
@@ -63,3 +66,4 @@ array(4) {
     NULL
   }
 }
+postdump

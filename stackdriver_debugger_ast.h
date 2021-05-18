@@ -18,6 +18,7 @@
 #define PHP_STACKDRIVER_DEBUGGER_AST_H 1
 
 #include "php.h"
+#include "stackdriver_debugger_defines.h"
 
 int valid_debugger_statement(zend_string *statement);
 void stackdriver_debugger_ast_process(zend_ast *ast);
@@ -28,6 +29,6 @@ int stackdriver_debugger_ast_rshutdown(TSRMLS_D);
 void stackdriver_list_breakpoint_ids(zval *return_value);
 int stackdriver_debugger_breakpoint_injected(zend_string *filename, zend_string *breakpoint_id);
 
-PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions);
+PHP_INI_MH(OnUpdate_stackdriver_debugger_allowed_functions);
 
 #endif /* PHP_STACKDRIVER_DEBUGGER_AST_H */

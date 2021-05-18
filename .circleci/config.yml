@@ -1,0 +1,31 @@
+# PHP CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-php/ for more details
+#
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: google/cloud-sdk
+        auth:
+          username: $DOCKERHUB_USER
+          password: $DOCKERHUB_PASSWORD
+
+    steps:
+      - checkout
+      - run:
+          name: "Setup Environment"
+          command: |
+            echo 'export APPENGINE_PROJECT_ID="${APPENGINE_PROJECT_ID}"' >> $BASH_ENV
+            echo 'export GOOGLE_PROJECT_ID="${GOOGLE_PROJECT_ID}"' >> $BASH_ENV
+            echo 'export GOOGLE_COMPUTE_REGION="${GOOGLE_COMPUTE_REGION}"' >> $BASH_ENV
+            echo 'export GOOGLE_APPLICATION_CREDENTIALS=`echo ${GOOGLE_CREDENTIALS_BASE64} | base64 -di`' >> $BASH_ENV
+            apt-get update -y
+            apt-get -y --only-upgrade install google-cloud-sdk-kubectl-oidc google-cloud-sdk google-cloud-sdk-kpt google-cloud-sdk-cloud-build-local
+            gcloud --quiet config configurations create ${CLOUDSDK_ACTIVE_CONFIG_NAME}
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+            echo $GOOGLE_CREDENTIALS_BASE64 | base64 -di | gcloud auth activate-service-account --key-file=-
+            gcloud --quiet config set compute/region ${GOOGLE_COMPUTE_REGION}
+      - run:
+          name: "Run Tests"
+          command: ./scripts/run_test_suite.sh

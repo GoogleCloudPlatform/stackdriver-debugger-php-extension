@@ -27,10 +27,14 @@
 static void (*original_zend_ast_process)(zend_ast*);
 
 /* map of function name -> empty null zval */
-static HashTable global_whitelisted_functions;
+static HashTable global_allowed_functions;
 
 /* map of filename -> (map of breakpoint id -> nil) */
 static HashTable registered_breakpoints;
+
+static inline size_t ast_list_size(uint32_t children) {
+	return sizeof(zend_ast_list) - sizeof(zend_ast *) + sizeof(zend_ast *) * children;
+}
 
 /**
  * This method generates a new abstract syntax tree that injects a function
@@ -55,19 +59,19 @@ static HashTable registered_breakpoints;
 static zend_ast_list *create_debugger_ast(const char *callback, zend_string *breakpoint_id, uint32_t lineno)
 {
     zend_ast *new_call;
-    zend_ast_zval *var, *snapshot_id;
+    zend_ast_zval *var = NULL, *snapshot_id = NULL;
     zend_ast_list *new_list, *arg_list;
 
     var = emalloc(sizeof(zend_ast_zval));
     var->kind = ZEND_AST_ZVAL;
     ZVAL_STRING(&var->val, callback);
-    var->val.u2.lineno = lineno;
+    Z_LINENO(var->val) = lineno;
     zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(ast_to_clean), var);
 
     snapshot_id = emalloc(sizeof(zend_ast_zval));
     snapshot_id->kind = ZEND_AST_ZVAL;
     ZVAL_STR(&snapshot_id->val, breakpoint_id);
-    snapshot_id->val.u2.lineno = lineno;
+    Z_LINENO(snapshot_id->val) = lineno;
     zend_hash_next_index_insert_ptr(STACKDRIVER_DEBUGGER_G(ast_to_clean), snapshot_id);
 
     arg_list = emalloc(sizeof(zend_ast_list) + sizeof(zend_ast*));
@@ -111,7 +115,7 @@ static int inject_ast(zend_ast *ast, zend_ast_list *to_insert)
     zend_ast_decl *decl;
     zend_ast_zval *azval;
 
-    if (ast == NULL) {
+    if (ast == NULL || to_insert == NULL) {
         return FAILURE;
     }
 
@@ -216,7 +220,7 @@ static void fill_breakpoint_ids(zval *array, HashTable *breakpoints)
     int i;
     zend_string *breakpoint_id, *breakpoint_id2;
     ZEND_HASH_FOREACH_KEY(breakpoints, i, breakpoint_id) {
-        breakpoint_id2 = zend_string_dup(breakpoint_id, 0);
+        breakpoint_id2 = zend_string_init(ZSTR_VAL(breakpoint_id), ZSTR_LEN(breakpoint_id), 0);
         add_next_index_str(array, breakpoint_id2);
     } ZEND_HASH_FOREACH_END();
 }
@@ -267,7 +271,7 @@ static void reset_registered_breakpoints_for_filename(zend_string *filename)
          * Persistent string dup as the filename is request based and we need
          * it to live between requests.
          */
-        filename2 = zend_string_dup(filename, 1);
+        filename2 = zend_string_init(ZSTR_VAL(filename), ZSTR_LEN(filename), 1);
 
         /* Use malloc directly because we are not handling a request */
         breakpoints = malloc(sizeof(HashTable));
@@ -278,7 +282,7 @@ static void reset_registered_breakpoints_for_filename(zend_string *filename)
 
 static void register_breakpoint_id(zend_string *filename, zend_string *id)
 {
-    zend_string *id2 = zend_string_dup(id, 1);
+    zend_string *id2 = zend_string_init(ZSTR_VAL(id), ZSTR_LEN(id), 1);
     HashTable *breakpoints = zend_hash_find_ptr(&registered_breakpoints, filename);
     zend_hash_add_empty_element(breakpoints, id2);
 }
@@ -292,7 +296,7 @@ void stackdriver_debugger_ast_process(zend_ast *ast)
     HashTable *ht;
     stackdriver_debugger_snapshot_t *snapshot;
     stackdriver_debugger_logpoint_t *logpoint;
-    zend_ast_list *to_insert;
+    zend_ast_list *to_insert = NULL;
     zend_string *filename = zend_get_compiled_filename();
 
     zval *snapshots = zend_hash_find(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
@@ -323,15 +327,17 @@ void stackdriver_debugger_ast_process(zend_ast *ast)
         ht = Z_ARR_P(logpoints);
 
         ZEND_HASH_FOREACH_PTR(ht, logpoint) {
-            to_insert = create_debugger_ast(
-                "stackdriver_debugger_logpoint",
-                logpoint->id,
-                logpoint->lineno
-            );
-            if (inject_ast(ast, to_insert) == SUCCESS) {
-                register_breakpoint_id(filename, logpoint->id);
-            } else {
-                // failed to insert
+            if (logpoint != NULL && logpoint->id != NULL) {
+                to_insert = create_debugger_ast(
+                    "stackdriver_debugger_logpoint",
+                    logpoint->id,
+                    logpoint->lineno
+                );
+                if (ast != NULL && to_insert != NULL && inject_ast(ast, to_insert) == SUCCESS) {
+                    register_breakpoint_id(filename, logpoint->id);
+                } else {
+                    // failed to insert
+                }
             }
         } ZEND_HASH_FOREACH_END();
     }
@@ -349,19 +355,23 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
 {
     zval source_zval;
 
-    ZVAL_STR(&source_zval, source);
-    Z_TRY_ADDREF(source_zval);
+    ZVAL_STR_COPY(&source_zval, source);
     zend_save_lexical_state(original_lex_state);
 
-    if (zend_prepare_string_for_scanning(&source_zval, "") == FAILURE) {
-        zend_restore_lexical_state(original_lex_state);
-        return FAILURE;
-    }
+    zend_prepare_string_for_scanning(&source_zval, "");
+    // if (zend_prepare_string_for_scanning(&source_zval, "") == FAILURE) {
+    //     zend_restore_lexical_state(original_lex_state);
+    //     return FAILURE;
+    // }
 
     CG(ast) = NULL;
     CG(ast_arena) = zend_arena_create(1024 * 32);
 
+    #if PHP_VERSION_ID < 70400
     zval_dtor(&source_zval);
+    #else
+    zval_ptr_dtor_str(&source_zval);
+    #endif
 
     if (zendparse() != 0) {
         /* Error parsing the string */
@@ -384,16 +394,16 @@ static int compile_ast(zend_string *source, zend_ast **ast_p, zend_lex_state *or
 }
 
 /**
- * Determine if the allowed function call is whitelisted.
+ * Determine if the function call is allowed.
  */
 static int valid_debugger_call(zend_string *function_name)
 {
-    if (zend_hash_find(&global_whitelisted_functions, function_name) != NULL) {
+    if (zend_hash_find(&global_allowed_functions, function_name) != NULL) {
         return SUCCESS;
     }
 
-    if (STACKDRIVER_DEBUGGER_G(user_whitelisted_functions) &&
-        zend_hash_find(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), function_name) != NULL) {
+    if (STACKDRIVER_DEBUGGER_G(user_allowed_functions) &&
+        zend_hash_find(STACKDRIVER_DEBUGGER_G(user_allowed_functions), function_name) != NULL) {
         return SUCCESS;
     }
 
@@ -563,265 +573,265 @@ int valid_debugger_statement(zend_string *statement)
     return SUCCESS;
 }
 
-static void register_user_whitelisted_functions_str(const char *str, int len)
+static void register_user_allowed_functions_str(const char *str, int len)
 {
     char *key = NULL, *last = NULL;
     char *tmp = estrndup(str, len);
 
     for (key = php_strtok_r(tmp, ",", &last); key; key = php_strtok_r(NULL, ",", &last)) {
-        zend_hash_str_add_empty_element(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), key, strlen(key));
+        zend_hash_str_add_empty_element(STACKDRIVER_DEBUGGER_G(user_allowed_functions), key, strlen(key));
     }
     efree(tmp);
 }
 
-static void register_user_whitelisted_functions(zend_string *ini_setting)
+static void register_user_allowed_functions(zend_string *ini_setting)
 {
-    register_user_whitelisted_functions_str(ZSTR_VAL(ini_setting), ZSTR_LEN(ini_setting));
+    register_user_allowed_functions_str(ZSTR_VAL(ini_setting), ZSTR_LEN(ini_setting));
 }
 
-#define WHITELIST_FUNCTION(function_name) zend_hash_str_add_empty_element(ht, function_name, strlen(function_name))
+#define ALLOW_FUNCTION(function_name) zend_hash_str_add_empty_element(ht, function_name, strlen(function_name))
 
 /*
  * Registers a hard-coded list of functions to allow in conditions and
  * expressions.
  */
-static int register_whitelisted_functions(HashTable *ht)
+static int register_allowed_functions(HashTable *ht)
 {
     /* Array functions */
-    WHITELIST_FUNCTION("array_change_key_case");
-    WHITELIST_FUNCTION("array_chunk");
-    WHITELIST_FUNCTION("array_column");
-    WHITELIST_FUNCTION("array_combine");
-    WHITELIST_FUNCTION("array_count_values");
-    WHITELIST_FUNCTION("array_diff_assoc");
-    WHITELIST_FUNCTION("array_diff_key");
-    WHITELIST_FUNCTION("array_diff_uassoc");
-    WHITELIST_FUNCTION("array_diff_ukey");
-    WHITELIST_FUNCTION("array_diff");
-    WHITELIST_FUNCTION("array_fill_keys");
-    WHITELIST_FUNCTION("array_fill");
-    WHITELIST_FUNCTION("array_filter");
-    WHITELIST_FUNCTION("array_flip");
-    WHITELIST_FUNCTION("array_intersect_assoc");
-    WHITELIST_FUNCTION("array_intersect_key");
-    WHITELIST_FUNCTION("array_intersect_uassoc");
-    WHITELIST_FUNCTION("array_intersect_ukey");
-    WHITELIST_FUNCTION("array_key_exists");
-    WHITELIST_FUNCTION("array_keys");
-    WHITELIST_FUNCTION("array_map");
-    WHITELIST_FUNCTION("array_merge_recursive");
-    WHITELIST_FUNCTION("array_merge");
-    WHITELIST_FUNCTION("array_multisort");
-    WHITELIST_FUNCTION("array_pad");
-    WHITELIST_FUNCTION("array_product");
-    WHITELIST_FUNCTION("array_rand");
-    WHITELIST_FUNCTION("array_reduce");
-    WHITELIST_FUNCTION("array_replace_recursive");
-    WHITELIST_FUNCTION("array_replace");
-    WHITELIST_FUNCTION("array_reverse");
-    WHITELIST_FUNCTION("array_search");
-    WHITELIST_FUNCTION("array_slice");
-    WHITELIST_FUNCTION("array_splice");
-    WHITELIST_FUNCTION("array_sum");
-    WHITELIST_FUNCTION("array_udiff_assoc");
-    WHITELIST_FUNCTION("array_udiff_uassoc");
-    WHITELIST_FUNCTION("array_udiff");
-    WHITELIST_FUNCTION("array_uintersect_assoc");
-    WHITELIST_FUNCTION("array_uintersect_uassoc");
-    WHITELIST_FUNCTION("array_uintersect");
-    WHITELIST_FUNCTION("array_unique");
-    WHITELIST_FUNCTION("array_values");
-    WHITELIST_FUNCTION("array_walk_recursive");
-    WHITELIST_FUNCTION("array_walk");
-    WHITELIST_FUNCTION("compact");
-    WHITELIST_FUNCTION("count");
-    WHITELIST_FUNCTION("current");
-    WHITELIST_FUNCTION("in_array");
-    WHITELIST_FUNCTION("key_exists");
-    WHITELIST_FUNCTION("key");
-    WHITELIST_FUNCTION("pos");
-    WHITELIST_FUNCTION("range");
-    WHITELIST_FUNCTION("sizeof");
+    ALLOW_FUNCTION("array_change_key_case");
+    ALLOW_FUNCTION("array_chunk");
+    ALLOW_FUNCTION("array_column");
+    ALLOW_FUNCTION("array_combine");
+    ALLOW_FUNCTION("array_count_values");
+    ALLOW_FUNCTION("array_diff_assoc");
+    ALLOW_FUNCTION("array_diff_key");
+    ALLOW_FUNCTION("array_diff_uassoc");
+    ALLOW_FUNCTION("array_diff_ukey");
+    ALLOW_FUNCTION("array_diff");
+    ALLOW_FUNCTION("array_fill_keys");
+    ALLOW_FUNCTION("array_fill");
+    ALLOW_FUNCTION("array_filter");
+    ALLOW_FUNCTION("array_flip");
+    ALLOW_FUNCTION("array_intersect_assoc");
+    ALLOW_FUNCTION("array_intersect_key");
+    ALLOW_FUNCTION("array_intersect_uassoc");
+    ALLOW_FUNCTION("array_intersect_ukey");
+    ALLOW_FUNCTION("array_key_exists");
+    ALLOW_FUNCTION("array_keys");
+    ALLOW_FUNCTION("array_map");
+    ALLOW_FUNCTION("array_merge_recursive");
+    ALLOW_FUNCTION("array_merge");
+    ALLOW_FUNCTION("array_multisort");
+    ALLOW_FUNCTION("array_pad");
+    ALLOW_FUNCTION("array_product");
+    ALLOW_FUNCTION("array_rand");
+    ALLOW_FUNCTION("array_reduce");
+    ALLOW_FUNCTION("array_replace_recursive");
+    ALLOW_FUNCTION("array_replace");
+    ALLOW_FUNCTION("array_reverse");
+    ALLOW_FUNCTION("array_search");
+    ALLOW_FUNCTION("array_slice");
+    ALLOW_FUNCTION("array_splice");
+    ALLOW_FUNCTION("array_sum");
+    ALLOW_FUNCTION("array_udiff_assoc");
+    ALLOW_FUNCTION("array_udiff_uassoc");
+    ALLOW_FUNCTION("array_udiff");
+    ALLOW_FUNCTION("array_uintersect_assoc");
+    ALLOW_FUNCTION("array_uintersect_uassoc");
+    ALLOW_FUNCTION("array_uintersect");
+    ALLOW_FUNCTION("array_unique");
+    ALLOW_FUNCTION("array_values");
+    ALLOW_FUNCTION("array_walk_recursive");
+    ALLOW_FUNCTION("array_walk");
+    ALLOW_FUNCTION("compact");
+    ALLOW_FUNCTION("count");
+    ALLOW_FUNCTION("current");
+    ALLOW_FUNCTION("in_array");
+    ALLOW_FUNCTION("key_exists");
+    ALLOW_FUNCTION("key");
+    ALLOW_FUNCTION("pos");
+    ALLOW_FUNCTION("range");
+    ALLOW_FUNCTION("sizeof");
 
     /* Class functions */
-    WHITELIST_FUNCTION("class_exists");
-    WHITELIST_FUNCTION("get_called_class");
-    WHITELIST_FUNCTION("get_class_methods");
-    WHITELIST_FUNCTION("get_class_vars");
-    WHITELIST_FUNCTION("get_class");
-    WHITELIST_FUNCTION("get_declared_classes");
-    WHITELIST_FUNCTION("get_declared_interfaces");
-    WHITELIST_FUNCTION("get_declared_traits");
-    WHITELIST_FUNCTION("get_object_vars");
-    WHITELIST_FUNCTION("get_parent_class");
-    WHITELIST_FUNCTION("interface_exists");
-    WHITELIST_FUNCTION("is_a");
-    WHITELIST_FUNCTION("is_subclass_of");
-    WHITELIST_FUNCTION("method_exists");
-    WHITELIST_FUNCTION("property_exists");
-    WHITELIST_FUNCTION("trait_exists");
+    ALLOW_FUNCTION("class_exists");
+    ALLOW_FUNCTION("get_called_class");
+    ALLOW_FUNCTION("get_class_methods");
+    ALLOW_FUNCTION("get_class_vars");
+    ALLOW_FUNCTION("get_class");
+    ALLOW_FUNCTION("get_declared_classes");
+    ALLOW_FUNCTION("get_declared_interfaces");
+    ALLOW_FUNCTION("get_declared_traits");
+    ALLOW_FUNCTION("get_object_vars");
+    ALLOW_FUNCTION("get_parent_class");
+    ALLOW_FUNCTION("interface_exists");
+    ALLOW_FUNCTION("is_a");
+    ALLOW_FUNCTION("is_subclass_of");
+    ALLOW_FUNCTION("method_exists");
+    ALLOW_FUNCTION("property_exists");
+    ALLOW_FUNCTION("trait_exists");
 
     /* Configuration handling: http://php.net/manual/en/ref.info.php */
-    WHITELIST_FUNCTION("extension_loaded");
-    WHITELIST_FUNCTION("gc_enabled");
-    WHITELIST_FUNCTION("get_cfg_var");
-    WHITELIST_FUNCTION("get_current_user");
-    WHITELIST_FUNCTION("get_defined_constants");
-    WHITELIST_FUNCTION("get_extension_funcs");
-    WHITELIST_FUNCTION("get_include_path");
-    WHITELIST_FUNCTION("get_included_files");
-    WHITELIST_FUNCTION("get_loaded_extensions");
-    WHITELIST_FUNCTION("get_magic_quotes_gpc");
-    WHITELIST_FUNCTION("get_magic_quotes_runtime");
-    WHITELIST_FUNCTION("get_required_files");
-    WHITELIST_FUNCTION("get_resoruces");
-    WHITELIST_FUNCTION("getenv");
-    WHITELIST_FUNCTION("getlastmod");
-    WHITELIST_FUNCTION("getmygid");
-    WHITELIST_FUNCTION("getmyinode");
-    WHITELIST_FUNCTION("getmypid");
-    WHITELIST_FUNCTION("getmyuid");
-    WHITELIST_FUNCTION("getrusage");
-    WHITELIST_FUNCTION("ini_get_all");
-    WHITELIST_FUNCTION("ini_get");
-    WHITELIST_FUNCTION("memory_get_peak_usage");
-    WHITELIST_FUNCTION("memory_get_usage");
-    WHITELIST_FUNCTION("php_ini_loaded_file");
-    WHITELIST_FUNCTION("php_ini_scanned_files");
-    WHITELIST_FUNCTION("php_logo_guid");
-    WHITELIST_FUNCTION("php_sapi_name");
-    WHITELIST_FUNCTION("php_uname");
-    WHITELIST_FUNCTION("phpversion");
-    WHITELIST_FUNCTION("sys_get_temp_dir");
-    WHITELIST_FUNCTION("version_compare");
-    WHITELIST_FUNCTION("zend_logo_guid");
-    WHITELIST_FUNCTION("zend_thread_id");
-    WHITELIST_FUNCTION("zend_version");
+    ALLOW_FUNCTION("extension_loaded");
+    ALLOW_FUNCTION("gc_enabled");
+    ALLOW_FUNCTION("get_cfg_var");
+    ALLOW_FUNCTION("get_current_user");
+    ALLOW_FUNCTION("get_defined_constants");
+    ALLOW_FUNCTION("get_extension_funcs");
+    ALLOW_FUNCTION("get_include_path");
+    ALLOW_FUNCTION("get_included_files");
+    ALLOW_FUNCTION("get_loaded_extensions");
+    ALLOW_FUNCTION("get_magic_quotes_gpc");
+    ALLOW_FUNCTION("get_magic_quotes_runtime");
+    ALLOW_FUNCTION("get_required_files");
+    ALLOW_FUNCTION("get_resoruces");
+    ALLOW_FUNCTION("getenv");
+    ALLOW_FUNCTION("getlastmod");
+    ALLOW_FUNCTION("getmygid");
+    ALLOW_FUNCTION("getmyinode");
+    ALLOW_FUNCTION("getmypid");
+    ALLOW_FUNCTION("getmyuid");
+    ALLOW_FUNCTION("getrusage");
+    ALLOW_FUNCTION("ini_get_all");
+    ALLOW_FUNCTION("ini_get");
+    ALLOW_FUNCTION("memory_get_peak_usage");
+    ALLOW_FUNCTION("memory_get_usage");
+    ALLOW_FUNCTION("php_ini_loaded_file");
+    ALLOW_FUNCTION("php_ini_scanned_files");
+    ALLOW_FUNCTION("php_logo_guid");
+    ALLOW_FUNCTION("php_sapi_name");
+    ALLOW_FUNCTION("php_uname");
+    ALLOW_FUNCTION("phpversion");
+    ALLOW_FUNCTION("sys_get_temp_dir");
+    ALLOW_FUNCTION("version_compare");
+    ALLOW_FUNCTION("zend_logo_guid");
+    ALLOW_FUNCTION("zend_thread_id");
+    ALLOW_FUNCTION("zend_version");
 
     /* Function handling: http://php.net/manual/en/book.funchand.php */
-    WHITELIST_FUNCTION("func_get_arg");
-    WHITELIST_FUNCTION("func_get_args");
-    WHITELIST_FUNCTION("func_num_args");
-    WHITELIST_FUNCTION("function_exists");
-    WHITELIST_FUNCTION("get_defined_function");
+    ALLOW_FUNCTION("func_get_arg");
+    ALLOW_FUNCTION("func_get_args");
+    ALLOW_FUNCTION("func_num_args");
+    ALLOW_FUNCTION("function_exists");
+    ALLOW_FUNCTION("get_defined_function");
 
     /* String handling: */
-    WHITELIST_FUNCTION("addcslashes");
-    WHITELIST_FUNCTION("addslashes");
-    WHITELIST_FUNCTION("bin2hex");
-    WHITELIST_FUNCTION("chop");
-    WHITELIST_FUNCTION("chr");
-    WHITELIST_FUNCTION("chunk_split");
-    WHITELIST_FUNCTION("convert_cyr_string");
-    WHITELIST_FUNCTION("convert_uudecode");
-    WHITELIST_FUNCTION("convert_uuencode");
-    WHITELIST_FUNCTION("count_chars");
-    WHITELIST_FUNCTION("crc32");
-    WHITELIST_FUNCTION("crypt");
-    WHITELIST_FUNCTION("explode");
-    WHITELIST_FUNCTION("get_html_translation_table");
-    WHITELIST_FUNCTION("hebrev");
-    WHITELIST_FUNCTION("hebrevc");
-    WHITELIST_FUNCTION("hex2bin");
-    WHITELIST_FUNCTION("html_entity_decode");
-    WHITELIST_FUNCTION("htmlentities");
-    WHITELIST_FUNCTION("htmlspecialchars_decode");
-    WHITELIST_FUNCTION("html_specialchars");
-    WHITELIST_FUNCTION("implode");
-    WHITELIST_FUNCTION("join");
-    WHITELIST_FUNCTION("lcfirst");
-    WHITELIST_FUNCTION("levenshtein");
-    WHITELIST_FUNCTION("localeconv");
-    WHITELIST_FUNCTION("ltrim");
-    WHITELIST_FUNCTION("md5file");
-    WHITELIST_FUNCTION("md5");
-    WHITELIST_FUNCTION("metaphone");
-    WHITELIST_FUNCTION("money_format");
-    WHITELIST_FUNCTION("nl_langinfo");
-    WHITELIST_FUNCTION("nl2br");
-    WHITELIST_FUNCTION("number_format");
-    WHITELIST_FUNCTION("ord");
-    WHITELIST_FUNCTION("quoted_printable_decode");
-    WHITELIST_FUNCTION("quoted_printable_encode");
-    WHITELIST_FUNCTION("quotemeta");
-    WHITELIST_FUNCTION("rtrim");
-    WHITELIST_FUNCTION("sha1_file");
-    WHITELIST_FUNCTION("sha1");
-    WHITELIST_FUNCTION("soundex");
-    WHITELIST_FUNCTION("sprintf");
-    WHITELIST_FUNCTION("str_getcsv");
-    WHITELIST_FUNCTION("str_pad");
-    WHITELIST_FUNCTION("str_repeat");
-    WHITELIST_FUNCTION("str_rot13");
-    WHITELIST_FUNCTION("str_shuffle");
-    WHITELIST_FUNCTION("str_split");
-    WHITELIST_FUNCTION("str_word_count");
-    WHITELIST_FUNCTION("strcasecmp");
-    WHITELIST_FUNCTION("strchr");
-    WHITELIST_FUNCTION("strcmp");
-    WHITELIST_FUNCTION("strcoll");
-    WHITELIST_FUNCTION("strcspn");
-    WHITELIST_FUNCTION("strip_tags");
-    WHITELIST_FUNCTION("stripcslashes");
-    WHITELIST_FUNCTION("stripos");
-    WHITELIST_FUNCTION("stripslashes");
-    WHITELIST_FUNCTION("stristr");
-    WHITELIST_FUNCTION("strlen");
-    WHITELIST_FUNCTION("strnatcasecmp");
-    WHITELIST_FUNCTION("strnatcmp");
-    WHITELIST_FUNCTION("strncasecmp");
-    WHITELIST_FUNCTION("strncmp");
-    WHITELIST_FUNCTION("strpbrk");
-    WHITELIST_FUNCTION("strpos");
-    WHITELIST_FUNCTION("strrchr");
-    WHITELIST_FUNCTION("strrev");
-    WHITELIST_FUNCTION("strripos");
-    WHITELIST_FUNCTION("strrpos");
-    WHITELIST_FUNCTION("strspn");
-    WHITELIST_FUNCTION("strstr");
-    WHITELIST_FUNCTION("strtok");
-    WHITELIST_FUNCTION("strtolower");
-    WHITELIST_FUNCTION("strtoupper");
-    WHITELIST_FUNCTION("strtr");
-    WHITELIST_FUNCTION("substr_compare");
-    WHITELIST_FUNCTION("substr_count");
-    WHITELIST_FUNCTION("substr_replace");
-    WHITELIST_FUNCTION("substr");
-    WHITELIST_FUNCTION("trim");
-    WHITELIST_FUNCTION("ucfirst");
-    WHITELIST_FUNCTION("ucwords");
-    WHITELIST_FUNCTION("wordwrap");
+    ALLOW_FUNCTION("addcslashes");
+    ALLOW_FUNCTION("addslashes");
+    ALLOW_FUNCTION("bin2hex");
+    ALLOW_FUNCTION("chop");
+    ALLOW_FUNCTION("chr");
+    ALLOW_FUNCTION("chunk_split");
+    ALLOW_FUNCTION("convert_cyr_string");
+    ALLOW_FUNCTION("convert_uudecode");
+    ALLOW_FUNCTION("convert_uuencode");
+    ALLOW_FUNCTION("count_chars");
+    ALLOW_FUNCTION("crc32");
+    ALLOW_FUNCTION("crypt");
+    ALLOW_FUNCTION("explode");
+    ALLOW_FUNCTION("get_html_translation_table");
+    ALLOW_FUNCTION("hebrev");
+    ALLOW_FUNCTION("hebrevc");
+    ALLOW_FUNCTION("hex2bin");
+    ALLOW_FUNCTION("html_entity_decode");
+    ALLOW_FUNCTION("htmlentities");
+    ALLOW_FUNCTION("htmlspecialchars_decode");
+    ALLOW_FUNCTION("html_specialchars");
+    ALLOW_FUNCTION("implode");
+    ALLOW_FUNCTION("join");
+    ALLOW_FUNCTION("lcfirst");
+    ALLOW_FUNCTION("levenshtein");
+    ALLOW_FUNCTION("localeconv");
+    ALLOW_FUNCTION("ltrim");
+    ALLOW_FUNCTION("md5file");
+    ALLOW_FUNCTION("md5");
+    ALLOW_FUNCTION("metaphone");
+    ALLOW_FUNCTION("money_format");
+    ALLOW_FUNCTION("nl_langinfo");
+    ALLOW_FUNCTION("nl2br");
+    ALLOW_FUNCTION("number_format");
+    ALLOW_FUNCTION("ord");
+    ALLOW_FUNCTION("quoted_printable_decode");
+    ALLOW_FUNCTION("quoted_printable_encode");
+    ALLOW_FUNCTION("quotemeta");
+    ALLOW_FUNCTION("rtrim");
+    ALLOW_FUNCTION("sha1_file");
+    ALLOW_FUNCTION("sha1");
+    ALLOW_FUNCTION("soundex");
+    ALLOW_FUNCTION("sprintf");
+    ALLOW_FUNCTION("str_getcsv");
+    ALLOW_FUNCTION("str_pad");
+    ALLOW_FUNCTION("str_repeat");
+    ALLOW_FUNCTION("str_rot13");
+    ALLOW_FUNCTION("str_shuffle");
+    ALLOW_FUNCTION("str_split");
+    ALLOW_FUNCTION("str_word_count");
+    ALLOW_FUNCTION("strcasecmp");
+    ALLOW_FUNCTION("strchr");
+    ALLOW_FUNCTION("strcmp");
+    ALLOW_FUNCTION("strcoll");
+    ALLOW_FUNCTION("strcspn");
+    ALLOW_FUNCTION("strip_tags");
+    ALLOW_FUNCTION("stripcslashes");
+    ALLOW_FUNCTION("stripos");
+    ALLOW_FUNCTION("stripslashes");
+    ALLOW_FUNCTION("stristr");
+    ALLOW_FUNCTION("strlen");
+    ALLOW_FUNCTION("strnatcasecmp");
+    ALLOW_FUNCTION("strnatcmp");
+    ALLOW_FUNCTION("strncasecmp");
+    ALLOW_FUNCTION("strncmp");
+    ALLOW_FUNCTION("strpbrk");
+    ALLOW_FUNCTION("strpos");
+    ALLOW_FUNCTION("strrchr");
+    ALLOW_FUNCTION("strrev");
+    ALLOW_FUNCTION("strripos");
+    ALLOW_FUNCTION("strrpos");
+    ALLOW_FUNCTION("strspn");
+    ALLOW_FUNCTION("strstr");
+    ALLOW_FUNCTION("strtok");
+    ALLOW_FUNCTION("strtolower");
+    ALLOW_FUNCTION("strtoupper");
+    ALLOW_FUNCTION("strtr");
+    ALLOW_FUNCTION("substr_compare");
+    ALLOW_FUNCTION("substr_count");
+    ALLOW_FUNCTION("substr_replace");
+    ALLOW_FUNCTION("substr");
+    ALLOW_FUNCTION("trim");
+    ALLOW_FUNCTION("ucfirst");
+    ALLOW_FUNCTION("ucwords");
+    ALLOW_FUNCTION("wordwrap");
 
     /* Variable handling: http://php.net/manual/en/book.var.php */
-    WHITELIST_FUNCTION("boolval");
-    WHITELIST_FUNCTION("doubleval");
-    WHITELIST_FUNCTION("empty");
-    WHITELIST_FUNCTION("float_val");
-    WHITELIST_FUNCTION("get_defined_vars");
-    WHITELIST_FUNCTION("get_resource_type");
-    WHITELIST_FUNCTION("gettype");
-    WHITELIST_FUNCTION("intval");
-    WHITELIST_FUNCTION("is_array");
-    WHITELIST_FUNCTION("is_bool");
-    WHITELIST_FUNCTION("is_callable");
-    WHITELIST_FUNCTION("is_double");
-    WHITELIST_FUNCTION("is_float");
-    WHITELIST_FUNCTION("is_int");
-    WHITELIST_FUNCTION("is_integer");
-    WHITELIST_FUNCTION("is_iterable");
-    WHITELIST_FUNCTION("is_long");
-    WHITELIST_FUNCTION("is_null");
-    WHITELIST_FUNCTION("is_numeric");
-    WHITELIST_FUNCTION("is_object");
-    WHITELIST_FUNCTION("is_real");
-    WHITELIST_FUNCTION("is_resource");
-    WHITELIST_FUNCTION("is_scalar");
-    WHITELIST_FUNCTION("is_string");
-    WHITELIST_FUNCTION("isset");
-    WHITELIST_FUNCTION("serialize");
-    WHITELIST_FUNCTION("settype");
-    WHITELIST_FUNCTION("strval");
-    WHITELIST_FUNCTION("unserialize");
+    ALLOW_FUNCTION("boolval");
+    ALLOW_FUNCTION("doubleval");
+    ALLOW_FUNCTION("empty");
+    ALLOW_FUNCTION("float_val");
+    ALLOW_FUNCTION("get_defined_vars");
+    ALLOW_FUNCTION("get_resource_type");
+    ALLOW_FUNCTION("gettype");
+    ALLOW_FUNCTION("intval");
+    ALLOW_FUNCTION("is_array");
+    ALLOW_FUNCTION("is_bool");
+    ALLOW_FUNCTION("is_callable");
+    ALLOW_FUNCTION("is_double");
+    ALLOW_FUNCTION("is_float");
+    ALLOW_FUNCTION("is_int");
+    ALLOW_FUNCTION("is_integer");
+    ALLOW_FUNCTION("is_iterable");
+    ALLOW_FUNCTION("is_long");
+    ALLOW_FUNCTION("is_null");
+    ALLOW_FUNCTION("is_numeric");
+    ALLOW_FUNCTION("is_object");
+    ALLOW_FUNCTION("is_real");
+    ALLOW_FUNCTION("is_resource");
+    ALLOW_FUNCTION("is_scalar");
+    ALLOW_FUNCTION("is_string");
+    ALLOW_FUNCTION("isset");
+    ALLOW_FUNCTION("serialize");
+    ALLOW_FUNCTION("settype");
+    ALLOW_FUNCTION("strval");
+    ALLOW_FUNCTION("unserialize");
 
     return SUCCESS;
 }
@@ -833,16 +843,16 @@ static void ast_to_clean_dtor(zval *zv)
 }
 
 /**
- * Request initialization lifecycle hook. Sets up the function whitelist.
+ * Request initialization lifecycle hook. Sets up the allowed functions list.
  */
 int stackdriver_debugger_ast_rinit(TSRMLS_D)
 {
-    ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
-    zend_hash_init(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
+    ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_allowed_functions));
+    zend_hash_init(STACKDRIVER_DEBUGGER_G(user_allowed_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
 
-    char *ini = INI_STR(PHP_STACKDRIVER_DEBUGGER_INI_WHITELISTED_FUNCTIONS);
+    char *ini = INI_STR(PHP_STACKDRIVER_DEBUGGER_INI_ALLOWED_FUNCTIONS);
     if (ini) {
-        register_user_whitelisted_functions_str(ini, strlen(ini));
+        register_user_allowed_functions_str(ini, strlen(ini));
     }
 
     ALLOC_HASHTABLE(STACKDRIVER_DEBUGGER_G(ast_to_clean));
@@ -852,12 +862,12 @@ int stackdriver_debugger_ast_rinit(TSRMLS_D)
 }
 
 /**
- * Request shutdown lifecycle hook. Cleans up the function whitelist.
+ * Request shutdown lifecycle hook. Cleans up the allowed functions list.
  */
 int stackdriver_debugger_ast_rshutdown(TSRMLS_D)
 {
-    zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
-    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
+    zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_allowed_functions));
+    FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(user_allowed_functions));
     zend_hash_destroy(STACKDRIVER_DEBUGGER_G(ast_to_clean));
     FREE_HASHTABLE(STACKDRIVER_DEBUGGER_G(ast_to_clean));
 
@@ -894,9 +904,9 @@ int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS)
     original_zend_ast_process = zend_ast_process;
     zend_ast_process = stackdriver_debugger_ast_process;
 
-    /* Setup storage for whitelisted functions */
-    zend_hash_init(&global_whitelisted_functions, 1024, NULL, ZVAL_PTR_DTOR, 1);
-    register_whitelisted_functions(&global_whitelisted_functions);
+    /* Setup storage for allowed functions */
+    zend_hash_init(&global_allowed_functions, 1024, NULL, ZVAL_PTR_DTOR, 1);
+    register_allowed_functions(&global_allowed_functions);
 
     /* Setup storage for breakpoints by filename */
     zend_hash_init(&registered_breakpoints, 64, NULL, breakpoints_dtor, 1);
@@ -910,22 +920,22 @@ int stackdriver_debugger_ast_minit(INIT_FUNC_ARGS)
 int stackdriver_debugger_ast_mshutdown(SHUTDOWN_FUNC_ARGS)
 {
     zend_ast_process = original_zend_ast_process;
-    zend_hash_destroy(&global_whitelisted_functions);
+    zend_hash_destroy(&global_allowed_functions);
     zend_hash_destroy(&registered_breakpoints);
 
     return SUCCESS;
 }
 
 /**
- * Callback for when the user changes the function whitelist php.ini setting.
+ * Callback for when the user changes the allowed functions list php.ini setting.
  */
-PHP_INI_MH(OnUpdate_stackdriver_debugger_whitelisted_functions)
+PHP_INI_MH(OnUpdate_stackdriver_debugger_allowed_functions)
 {
     /* Only use this mechanism for ini_set (runtime stage) */
     if (new_value != NULL && stage & ZEND_INI_STAGE_RUNTIME) {
-        zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions));
-        zend_hash_init(STACKDRIVER_DEBUGGER_G(user_whitelisted_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
-        register_user_whitelisted_functions_str(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
+        zend_hash_destroy(STACKDRIVER_DEBUGGER_G(user_allowed_functions));
+        zend_hash_init(STACKDRIVER_DEBUGGER_G(user_allowed_functions), 8, NULL, ZVAL_PTR_DTOR, 1);
+        register_user_allowed_functions_str(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
     }
     return SUCCESS;
 }
