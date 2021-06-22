@@ -295,8 +295,14 @@ void stackdriver_debugger_ast_process(zend_ast *ast)
     zend_ast_list *to_insert;
     zend_string *filename = zend_get_compiled_filename();
 
-    zval *snapshots = zend_hash_find(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
-    zval *logpoints = zend_hash_find(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename);
+    zval *snapshots = NULL;
+	if (STACKDRIVER_DEBUGGER_G(snapshots_by_file) != NULL) {
+	    snapshots = zend_hash_find(STACKDRIVER_DEBUGGER_G(snapshots_by_file), filename);
+	}
+    zval *logpoints = NULL;
+	if (STACKDRIVER_DEBUGGER_G(logpoints_by_file) != NULL) {
+	    logpoints = zend_hash_find(STACKDRIVER_DEBUGGER_G(logpoints_by_file), filename);
+	}
 
     if (snapshots != NULL || logpoints != NULL) {
         reset_registered_breakpoints_for_filename(filename);
